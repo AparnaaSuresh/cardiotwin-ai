@@ -29,20 +29,29 @@ Not yet implemented:
 - Deployment
 - Runtime verification after dependency installation
 - Actual dataset inspection and training
+- Official UCI dataset downloaded locally
+- Official Excel dataset converted to CSV locally
+- Dataset inspection completed
 
 ## Next Step
 
-Add the official dataset CSV to:
+The official dataset CSV is now available locally at:
 
 ```text
 ml/data/z_alizadeh_sani_extension.csv
 ```
 
-Then run:
+Next run model training after installing ML dependencies:
 
 ```bash
 cd ml
 python train_models.py --data data/z_alizadeh_sani_extension.csv
+```
+
+Current blocker:
+
+```text
+scikit-learn/joblib dependency installation is hanging in this environment.
 ```
 
 ## Current GitHub Repository

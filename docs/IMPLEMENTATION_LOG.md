@@ -20,3 +20,8 @@
 - Added dataset integration guide.
 - Added backend sample patient endpoint.
 - Added backend model metadata endpoint.
+- Downloaded the official UCI Extension of Z-Alizadeh Sani dataset locally.
+- Added standard-library XLSX to CSV converter.
+- Converted official Excel dataset to `ml/data/z_alizadeh_sani_extension.csv`.
+- Ran dataset inspection successfully: 303 records, 59 columns, targets `Cath`, `LAD`, `LCX`, `RCA` present.
+- Patched target conversion to support `Stenotic` labels.

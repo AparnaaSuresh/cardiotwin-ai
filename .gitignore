@@ -6,5 +6,6 @@ dist/
 .env
 backend/models/*.joblib
 ml/data/*.csv
+ml/data/*.zip
+ml/data/uci_z_alizadeh_sani_extension/
 docs/model_reports/
-

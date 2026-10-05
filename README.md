@@ -88,6 +88,12 @@ Before training, inspect the dataset:
 python inspect_dataset.py --data data/z_alizadeh_sani_extension.csv
 ```
 
+If the official UCI file is downloaded as Excel, convert it first:
+
+```bash
+python ml/convert_official_xlsx.py --input "ml/data/uci_z_alizadeh_sani_extension/extention of Z-Alizadeh sani dataset.xlsx" --output "ml/data/z_alizadeh_sani_extension.csv"
+```
+
 The trainer saves artifacts to:
 
 ```text

@@ -4,10 +4,6 @@ from dataclasses import dataclass
 from typing import Iterable, List
 
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
 LEAKAGE_COLUMNS = {
@@ -53,7 +49,7 @@ def infer_binary_target(series: pd.Series) -> pd.Series:
         return series.astype(int)
 
     normalized = series.astype(str).str.strip().str.lower()
-    positive = {"yes", "y", "true", "1", "cad", "stenosis", "positive", "abnormal"}
+    positive = {"yes", "y", "true", "1", "cad", "stenosis", "stenotic", "positive", "abnormal"}
     negative = {"no", "n", "false", "0", "normal", "negative"}
 
     mapped = normalized.map(lambda value: 1 if value in positive else 0 if value in negative else None)
@@ -77,6 +73,11 @@ def feature_columns(df: pd.DataFrame, target_columns: Iterable[str]) -> List[str
 
 
 def build_preprocessor(df: pd.DataFrame, columns: List[str]) -> ColumnTransformer:
+    from sklearn.compose import ColumnTransformer
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
     categorical = [column for column in columns if df[column].dtype == "object"]
     numeric = [column for column in columns if column not in categorical]
 
@@ -99,4 +100,3 @@ def build_preprocessor(df: pd.DataFrame, columns: List[str]) -> ColumnTransforme
             ("cat", categorical_pipeline, categorical),
         ]
     )
-

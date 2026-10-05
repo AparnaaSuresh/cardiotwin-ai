@@ -49,6 +49,14 @@ The inspection report will be saved to:
 docs/model_reports/dataset_inspection.json
 ```
 
+## Optional - Convert Official UCI Excel File
+
+If the official UCI download is extracted as `.xlsx`, convert it using:
+
+```bash
+python ml/convert_official_xlsx.py --input "ml/data/uci_z_alizadeh_sani_extension/extention of Z-Alizadeh sani dataset.xlsx" --output "ml/data/z_alizadeh_sani_extension.csv"
+```
+
 ## Step 3 - Confirm Target Columns
 
 Required targets:
@@ -98,4 +106,3 @@ docs/model_reports/training_summary.json
 ## Safety Note
 
 This model is for educational decision-support only. It is not a diagnostic medical system.
-

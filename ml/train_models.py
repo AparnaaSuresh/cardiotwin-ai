@@ -6,7 +6,6 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-import shap
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -24,6 +23,11 @@ try:
     from xgboost import XGBClassifier
 except ImportError:  # pragma: no cover
     XGBClassifier = None
+
+try:
+    import shap
+except ImportError:  # pragma: no cover
+    shap = None
 
 from preprocess import DatasetConfig, build_preprocessor, feature_columns, infer_binary_target, load_dataset
 
@@ -127,7 +131,7 @@ def train_for_target(df, target_name, target_column, features):
     feature_names = transformed_feature_names(preprocessor)
 
     try:
-        explainer = shap.Explainer(model, transformed_train, feature_names=feature_names)
+        explainer = shap.Explainer(model, transformed_train, feature_names=feature_names) if shap is not None else None
     except Exception:
         explainer = None
 

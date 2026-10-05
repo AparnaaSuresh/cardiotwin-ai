@@ -8,6 +8,8 @@ import pandas as pd
 
 from preprocess import DatasetConfig, feature_columns, load_dataset
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def summarize_dataset(path: str, config: DatasetConfig) -> dict:
     df = load_dataset(path)
@@ -44,7 +46,7 @@ def main() -> None:
     parser.add_argument("--lad-target", default="LAD")
     parser.add_argument("--lcx-target", default="LCX")
     parser.add_argument("--rca-target", default="RCA")
-    parser.add_argument("--output", default="../docs/model_reports/dataset_inspection.json")
+    parser.add_argument("--output", default="docs/model_reports/dataset_inspection.json")
     args = parser.parse_args()
 
     config = DatasetConfig(
@@ -55,6 +57,8 @@ def main() -> None:
     )
     summary = summarize_dataset(args.data, config)
     output = Path(args.output)
+    if not output.is_absolute():
+        output = ROOT / output
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
@@ -62,4 +66,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
