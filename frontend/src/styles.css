@@ -1,0 +1,349 @@
+:root {
+  --bg: #f5f8fc;
+  --panel: #ffffff;
+  --panel-soft: #f0f6ff;
+  --text: #10203f;
+  --muted: #6a7890;
+  --line: #d9e4f2;
+  --blue: #1267e7;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --green: #16a34a;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button, input, select {
+  font: inherit;
+}
+
+.shell {
+  padding: 18px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandIcon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0ea5e9, #1d4ed8);
+  color: white;
+  display: grid;
+  place-items: center;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+.brand p, .sectionTitle p, .flowStep p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.modeBadge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(420px, 1.35fr) minmax(300px, 1fr);
+  gap: 16px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 18px 42px rgba(16, 32, 63, 0.08);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sectionTitle svg {
+  color: var(--blue);
+  margin-top: 2px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+input, select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 11px;
+  color: var(--text);
+  background: #fff;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 9px;
+  color: var(--text);
+  margin: 0;
+}
+
+.primary {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--blue);
+  color: white;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.primary:disabled {
+  opacity: 0.65;
+}
+
+.heartSvg {
+  width: 100%;
+  min-height: 360px;
+}
+
+.heartShape {
+  fill: #ef4444;
+  opacity: 0.88;
+  filter: drop-shadow(0 20px 20px rgba(148, 31, 31, 0.25));
+}
+
+.heartDivider {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.vessel {
+  fill: none;
+  stroke-width: 13;
+  stroke-linecap: round;
+  cursor: pointer;
+}
+
+.vessel.selected {
+  stroke-width: 17;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+.labelBg {
+  fill: #10203f;
+  opacity: .9;
+}
+
+.labelText {
+  fill: white;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.vesselGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.vesselButton {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.vesselButton.active {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(18, 103, 231, 0.15);
+}
+
+.vesselButton strong {
+  font-size: 22px;
+}
+
+.riskList {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.riskRow {
+  display: grid;
+  grid-template-columns: 46px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.track, .impactTrack {
+  height: 11px;
+  border-radius: 999px;
+  background: #e6edf7;
+  overflow: hidden;
+}
+
+.fill, .impactTrack div {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.explain {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.impactRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 56px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin-top: 9px;
+}
+
+.disclaimer, .error, .empty {
+  margin-top: 16px;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.disclaimer {
+  display: flex;
+  gap: 8px;
+  color: #7c2d12;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-size: 13px;
+}
+
+.error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.empty {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+  align-content: center;
+  gap: 8px;
+}
+
+.workflow {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.flowStep {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--panel-soft);
+}
+
+.flowStep span {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--blue);
+  color: white;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1050px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .workflow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .fieldGrid,
+  .checks,
+  .vesselGrid,
+  .workflow {
+    grid-template-columns: 1fr;
+  }
+  .riskRow,
+  .impactRow {
+    grid-template-columns: 1fr;
+  }
+}
+
