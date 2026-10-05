@@ -49,3 +49,10 @@ class HealthResponse(BaseModel):
     status: str
     model_mode: str
 
+
+class ModelMetadataResponse(BaseModel):
+    targets: List[str]
+    required_model_artifacts: List[str]
+    leakage_columns: List[str]
+    model_mode: str
+    notes: List[str]

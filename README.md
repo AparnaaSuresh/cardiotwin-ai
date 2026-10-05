@@ -59,6 +59,8 @@ Backend API:
 
 ```text
 GET  /health
+GET  /sample-patients
+GET  /model-metadata
 POST /predict
 ```
 
@@ -78,6 +80,12 @@ If target names differ:
 
 ```bash
 python train_models.py --data data/z_alizadeh_sani_extension.csv --cad-target Cath --lad-target LAD --lcx-target LCX --rca-target RCA
+```
+
+Before training, inspect the dataset:
+
+```bash
+python inspect_dataset.py --data data/z_alizadeh_sani_extension.csv
 ```
 
 The trainer saves artifacts to:
@@ -103,4 +111,3 @@ set VITE_API_URL=http://localhost:8000
 ## Safety
 
 This project is an educational decision-support prototype only. It is not a clinical diagnostic device and must not replace qualified medical evaluation.
-

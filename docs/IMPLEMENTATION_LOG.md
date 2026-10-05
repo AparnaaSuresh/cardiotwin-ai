@@ -16,3 +16,7 @@
 - Pushed initial scaffold to `https://github.com/AparnaaSuresh/cardiotwin-ai`.
 - Added step-by-step implementation phases document.
 - Added then-and-now progress report.
+- Added dataset inspection script.
+- Added dataset integration guide.
+- Added backend sample patient endpoint.
+- Added backend model metadata endpoint.

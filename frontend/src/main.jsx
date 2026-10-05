@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Activity,
@@ -45,8 +45,26 @@ function App() {
   const [selectedTarget, setSelectedTarget] = useState("LAD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [samples, setSamples] = useState({});
+  const [sampleStatus, setSampleStatus] = useState("Using built-in sample");
 
   const selectedPrediction = result?.predictions?.[selectedTarget];
+
+  useEffect(() => {
+    async function loadSamples() {
+      try {
+        const response = await fetch(`${API_URL}/sample-patients`);
+        if (!response.ok) throw new Error("Sample API unavailable");
+        const data = await response.json();
+        setSamples(data);
+        setSampleStatus("Loaded from backend");
+      } catch {
+        setSamples({ high_lad_risk: samplePatient });
+        setSampleStatus("Using built-in sample");
+      }
+    }
+    loadSamples();
+  }, []);
 
   async function runPrediction() {
     setLoading(true);
@@ -88,7 +106,14 @@ function App() {
       </header>
 
       <section className="layout">
-        <PatientForm patient={patient} setPatient={setPatient} onRun={runPrediction} loading={loading} />
+        <PatientForm
+          patient={patient}
+          setPatient={setPatient}
+          onRun={runPrediction}
+          loading={loading}
+          samples={samples}
+          sampleStatus={sampleStatus}
+        />
 
         <section className="heartPanel card">
           <div className="sectionTitle">
@@ -157,7 +182,7 @@ function App() {
   );
 }
 
-function PatientForm({ patient, setPatient, onRun, loading }) {
+function PatientForm({ patient, setPatient, onRun, loading, samples, sampleStatus }) {
   function update(field, value) {
     setPatient((current) => ({ ...current, [field]: value }));
   }
@@ -179,9 +204,27 @@ function PatientForm({ patient, setPatient, onRun, loading }) {
         <Activity size={20} />
         <div>
           <h2>Patient Clinical Input</h2>
-          <p>Manual entry now; CSV batch upload can be added next.</p>
+          <p>{sampleStatus}; CSV batch upload can be added next.</p>
         </div>
       </div>
+
+      <label>
+        Sample patient
+        <select
+          defaultValue=""
+          onChange={(event) => {
+            const selected = samples[event.target.value];
+            if (selected) setPatient(selected);
+          }}
+        >
+          <option value="" disabled>Select sample case</option>
+          {Object.keys(samples).map((name) => (
+            <option key={name} value={name}>
+              {name.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label>
         Sex

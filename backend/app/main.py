@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .model_loader import TARGETS
 from .model_loader import load_artifacts
 from .predict import DISCLAIMER, predict_patient
-from .schemas import HealthResponse, PatientInput, PredictionResponse
+from .sample_patients import SAMPLE_PATIENTS
+from .schemas import HealthResponse, ModelMetadataResponse, PatientInput, PredictionResponse
 
 
 app = FastAPI(
@@ -30,6 +32,38 @@ def health() -> HealthResponse:
     )
 
 
+@app.get("/sample-patients")
+def sample_patients() -> dict:
+    return {name: patient.model_dump() for name, patient in SAMPLE_PATIENTS.items()}
+
+
+@app.get("/model-metadata", response_model=ModelMetadataResponse)
+def model_metadata() -> ModelMetadataResponse:
+    artifacts = load_artifacts()
+    required = []
+    for target in TARGETS:
+        lower = target.lower()
+        required.extend(
+            [
+                f"{lower}_model.joblib",
+                f"{lower}_preprocessor.joblib",
+                f"{lower}_feature_names.joblib",
+                f"{lower}_explainer.joblib",
+            ]
+        )
+    return ModelMetadataResponse(
+        targets=list(TARGETS),
+        required_model_artifacts=required,
+        leakage_columns=["LAD", "LCX", "RCA", "Cath", "CAD target column"],
+        model_mode="trained-model" if artifacts["ready"] else "demo-fallback",
+        notes=[
+            "Demo fallback is only for integration testing.",
+            "Real performance requires the official Z-Alizadeh Sani extension dataset.",
+            "SHAP values explain model contribution, not medical causation.",
+        ],
+    )
+
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict(patient: PatientInput) -> PredictionResponse:
     mode, predictions = predict_patient(patient)
@@ -38,4 +72,3 @@ def predict(patient: PatientInput) -> PredictionResponse:
         disclaimer=DISCLAIMER,
         predictions=predictions,
     )
-

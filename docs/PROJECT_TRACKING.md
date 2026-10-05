@@ -16,6 +16,10 @@ Implemented:
 - GitHub repository connected and pushed
 - Step-by-step implementation phases document
 - Then-and-now progress report
+- Dataset inspection script
+- Sample patient API endpoint
+- Model metadata API endpoint
+- Dataset integration guide
 
 Not yet implemented:
 
@@ -24,6 +28,7 @@ Not yet implemented:
 - True Three.js GLB heart integration
 - Deployment
 - Runtime verification after dependency installation
+- Actual dataset inspection and training
 
 ## Next Step
 
