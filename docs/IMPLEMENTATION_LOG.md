@@ -11,4 +11,8 @@
 - Added React frontend dashboard.
 - Added SVG vessel risk map.
 - Added README and project planning docs.
-
+- Copied project into `C:\Users\Hp\Documents\ChatGPT\Cardio`.
+- Connected project to GitHub.
+- Pushed initial scaffold to `https://github.com/AparnaaSuresh/cardiotwin-ai`.
+- Added step-by-step implementation phases document.
+- Added then-and-now progress report.

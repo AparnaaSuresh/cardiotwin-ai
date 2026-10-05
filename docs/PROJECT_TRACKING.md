@@ -13,6 +13,9 @@ Implemented:
 - React frontend dashboard
 - SVG-based vessel risk visualization
 - Project README
+- GitHub repository connected and pushed
+- Step-by-step implementation phases document
+- Then-and-now progress report
 
 Not yet implemented:
 
@@ -20,6 +23,7 @@ Not yet implemented:
 - Real SHAP artifacts from trained models
 - True Three.js GLB heart integration
 - Deployment
+- Runtime verification after dependency installation
 
 ## Next Step
 
@@ -36,3 +40,8 @@ cd ml
 python train_models.py --data data/z_alizadeh_sani_extension.csv
 ```
 
+## Current GitHub Repository
+
+```text
+https://github.com/AparnaaSuresh/cardiotwin-ai
+```
