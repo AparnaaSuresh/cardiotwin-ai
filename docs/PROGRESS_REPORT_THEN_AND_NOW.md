@@ -108,8 +108,10 @@ Completed:
 - Official Excel dataset converted to CSV.
 - Dataset inspection completed.
 - Real model training completed for CAD, LAD, LCX, and RCA.
+- SHAP explainer artifacts generated for CAD, LAD, LCX, and RCA.
 - Local trained artifacts generated.
 - Training metrics documented.
+- Backend API verified in trained-model mode.
 
 Files:
 
@@ -126,7 +128,7 @@ docs/MODEL_TRAINING_RESULTS.md
 Status:
 
 ```text
-Real training completed locally. SHAP artifact generation pending shap installation.
+Real training and SHAP artifact generation completed locally.
 ```
 
 ## 4. Frontend Scaffold
@@ -142,6 +144,9 @@ Completed:
 - SVG-based vessel risk map.
 - Responsive CSS.
 - Sample patient selector support.
+- Frontend dependencies installed.
+- Production build verified.
+- Dev server verified locally.
 
 Files:
 
@@ -155,7 +160,7 @@ frontend/src/styles.css
 Status:
 
 ```text
-Source created, runtime verification pending dependency install.
+Source created, build verified, and dev server verified locally.
 ```
 
 ## 5. Documentation
@@ -196,9 +201,9 @@ backend/models/
 
 They are intentionally ignored by Git because raw datasets and binary artifacts should not be pushed unless required.
 
-## 2. SHAP Artifacts Are Pending
+## 2. Simplified Inference Form
 
-SHAP support exists in the project design and training code, but actual explainer files were not generated yet because the `shap` package is not installed in the current environment.
+The frontend currently collects a simplified clinical form. The trained model expects the full original dataset feature schema, so the backend maps collected inputs to the original features and uses neutral defaults for fields not yet collected.
 
 ## 3. 3D Heart Is Temporary
 
@@ -214,14 +219,13 @@ Future target:
 Three.js / React Three Fiber GLB heart model
 ```
 
-## 4. Runtime Verification Is Pending
+## 4. Deployment Is Pending
 
 Pending:
 
-- Backend server run.
-- Frontend package install.
-- Frontend server run.
-- Full frontend-to-backend prediction test.
+- Public deployment.
+- Production environment variables.
+- Hosted demo URL.
 
 ## Project Status Table
 
@@ -231,8 +235,8 @@ Pending:
 | Backend | Not present | FastAPI scaffold created |
 | ML pipeline | Not present | Real local training completed |
 | Dataset | Mentioned in problem statement | Downloaded, converted, inspected locally |
-| SHAP | Concept discussed | Artifact support added, actual artifacts pending |
-| Frontend | Mockups only | React source created |
+| SHAP | Concept discussed | Real local explainer artifacts generated |
+| Frontend | Mockups only | React source created and build verified |
 | 3D visualization | Concept only | SVG placeholder created |
 | Documentation | Planning scattered | Structured docs and metrics created |
 | Deployment | Not started | Not started |
@@ -242,29 +246,27 @@ Pending:
 The next implementation step is:
 
 ```text
-Generate SHAP artifacts and verify the backend/frontend runtime flow.
+Improve the frontend form, then replace the SVG vessel map with a true Three.js heart view.
 ```
 
 After that:
 
-1. Install SHAP in the ML/backend runtime.
-2. Re-run `ml/train_models.py`.
-3. Confirm SHAP local explanations appear in API output.
-4. Start backend.
-5. Start frontend.
-6. Test full prediction flow.
-7. Replace SVG with true Three.js heart model.
+1. Add more original dataset fields to the frontend form.
+2. Add calibration curves and probability calibration.
+3. Improve LCX/RCA modeling.
+4. Replace SVG with true Three.js heart model.
+5. Prepare conference demo slides and script.
 
 ## Current Project Health
 
 Overall status:
 
 ```text
-Good progress. Scaffold is ready and real ML training has been completed locally.
+Good progress. Real ML training, SHAP generation, backend verification, and frontend build verification are completed locally.
 ```
 
 Main blocker:
 
 ```text
-SHAP artifact generation and runtime verification are pending.
+Three.js heart integration and deployment are pending.
 ```

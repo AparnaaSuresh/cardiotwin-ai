@@ -17,19 +17,106 @@ DISCLAIMER = (
 
 
 def patient_to_frame(patient: PatientInput) -> pd.DataFrame:
-    return pd.DataFrame([patient.model_dump()])
+    sex = "Male" if patient.sex.lower().startswith("m") else "Fmale"
+    has_rwma = bool(patient.rwma_region and patient.rwma_region.lower() not in {"none", "normal", "nil", "0"})
+    rwma_region = _rwma_to_dataset_code(patient.rwma_region)
+    height_cm = 165.0
+    weight_kg = 74.0
+    bmi = weight_kg / ((height_cm / 100) ** 2)
+
+    features = {
+        "Age": patient.age,
+        "Weight": weight_kg,
+        "Length": height_cm,
+        "Sex": sex,
+        "BMI": round(bmi, 2),
+        "DM": 1 if (patient.fasting_blood_sugar or 0) >= 126 else 0,
+        "HTN": 1 if patient.systolic_bp >= 140 or patient.diastolic_bp >= 90 else 0,
+        "Current_Smoker": 0,
+        "EX_Smoker": 0,
+        "FH": 0,
+        "Obesity": "Y" if bmi >= 30 else "N",
+        "CRF": "N",
+        "CVA": "N",
+        "Airway_disease": "N",
+        "Thyroid_Disease": "N",
+        "CHF": "N",
+        "DLP": "Y" if patient.cholesterol >= 130 or (patient.triglyceride or 0) >= 150 else "N",
+        "BP": patient.systolic_bp,
+        "PR": patient.pulse_rate or 70.0,
+        "Edema": 0,
+        "Weak_Peripheral_Pulse": "N",
+        "Lung_rales": "N",
+        "Systolic_Murmur": "N",
+        "Diastolic_Murmur": "N",
+        "Typical_Chest_Pain": 0,
+        "Dyspnea": "N",
+        "Function_Class": 1 if has_rwma else 0,
+        "Atypical": "N",
+        "Nonanginal": "N",
+        "Exertional_CP": "N",
+        "LowTH_Ang": "N",
+        "Q_Wave": 0,
+        "St_Elevation": 1 if patient.st_elevation else 0,
+        "St_Depression": 1 if patient.st_depression else 0,
+        "Tinversion": 1 if patient.t_inversion else 0,
+        "LVH": "Y" if patient.lvh else "N",
+        "Poor_R_Progression": "N",
+        "BBB": "N",
+        "FBS": patient.fasting_blood_sugar or 98.0,
+        "CR": 1.0,
+        "TG": patient.triglyceride or 122.0,
+        "LDL": patient.cholesterol,
+        "HDL": 39.0,
+        "BUN": 16.0,
+        "ESR": 15.0,
+        "HB": 13.2,
+        "K": 4.2,
+        "Na": 141.0,
+        "WBC": 7100.0,
+        "Lymph": 32.0,
+        "Neut": 60.0,
+        "PLT": 210.0,
+        "EF_TTE": patient.ef_tte or 50.0,
+        "Region_RWMA": rwma_region,
+        "VHD": "N",
+    }
+    return pd.DataFrame([features])
+
+
+def _rwma_to_dataset_code(region: str | None) -> int:
+    if not region:
+        return 0
+    text = region.lower()
+    if any(token in text for token in ("none", "normal", "nil")):
+        return 0
+    if "anterior" in text:
+        return 1
+    if "inferior" in text:
+        return 2
+    if "lateral" in text:
+        return 3
+    return 4
 
 
 def _feature_impacts_from_scores(scores: Dict[str, float], top_n: int = 5) -> List[FeatureImpact]:
     ordered = sorted(scores.items(), key=lambda item: abs(item[1]), reverse=True)[:top_n]
     return [
         FeatureImpact(
-            feature=name,
+            feature=_display_feature_name(name),
             impact=round(float(value), 4),
             direction="increases risk" if value >= 0 else "decreases risk",
         )
         for name, value in ordered
     ]
+
+
+def _display_feature_name(name: str) -> str:
+    cleaned = name
+    for prefix in ("num__", "cat__"):
+        if cleaned.startswith(prefix):
+            cleaned = cleaned[len(prefix) :]
+    return cleaned.replace("_", " ")
 
 
 def _demo_probability(patient: PatientInput, target: str) -> tuple[float, Dict[str, float]]:

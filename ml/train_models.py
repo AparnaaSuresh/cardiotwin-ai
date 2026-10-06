@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from pathlib import Path
 
 import joblib
@@ -106,9 +107,17 @@ def train_for_target(df, target_name, target_column, features):
         )
         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         scoring = {"f1": "f1", "roc_auc": "roc_auc", "recall": "recall"}
-        scores = cross_validate(pipeline, X_train, y_train, cv=cv, scoring=scoring, error_score="raise")
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                scores = cross_validate(pipeline, X_train, y_train, cv=cv, scoring=scoring, error_score="raise")
+        except Exception as exc:
+            results[model_name] = {"status": "skipped", "reason": str(exc)}
+            continue
+
         mean_auc = float(np.mean(scores["test_roc_auc"]))
         results[model_name] = {
+            "status": "ok",
             "cv_f1": float(np.mean(scores["test_f1"])),
             "cv_recall": float(np.mean(scores["test_recall"])),
             "cv_roc_auc": mean_auc,
@@ -175,8 +184,6 @@ def main():
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     summary = {"features": features, "targets": targets, "results": {}}
-    shared_preprocessor_saved = False
-
     for target_name, target_column in targets.items():
         result = train_for_target(df, target_name, target_column, features)
         joblib.dump(result["pipeline"], BACKEND_MODEL_DIR / f"{target_name.lower()}_model.joblib")

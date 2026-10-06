@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+frontend/.npm-cache/
 .env
 backend/models/*.joblib
 ml/data/*.csv

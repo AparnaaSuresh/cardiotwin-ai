@@ -26,14 +26,16 @@ Implemented:
 - Real model training completed locally
 - Local trained artifacts generated for CAD, LAD, LCX, and RCA
 - Model training results documented
+- SHAP explainer artifacts generated locally
+- Backend runtime verified in trained-model mode
+- Frontend dependencies installed
+- Frontend production build verified
+- Frontend dev server verified locally
 
 Not yet implemented:
 
-- Real SHAP artifacts from trained models
 - True Three.js GLB heart integration
 - Deployment
-- Backend runtime verification after dependency installation
-- Frontend runtime verification after dependency installation
 
 ## Local Dataset
 
@@ -63,9 +65,9 @@ cd ml
 
 | Output | Best Model | ROC-AUC | F1 |
 |---|---|---:|---:|
-| CAD | Random Forest | 0.8798 | 0.9231 |
-| LAD | Random Forest | 0.8378 | 0.8267 |
-| LCX | Random Forest | 0.7095 | 0.4762 |
+| CAD | Random Forest | 0.8786 | 0.9130 |
+| LAD | Random Forest | 0.8400 | 0.8421 |
+| LCX | Random Forest | 0.7061 | 0.4878 |
 | RCA | Logistic Regression | 0.7391 | 0.6222 |
 
 Detailed metrics:
@@ -76,9 +78,9 @@ docs/MODEL_TRAINING_RESULTS.md
 
 ## Current Blockers
 
-- SHAP artifacts are pending because the `shap` package is not installed yet.
-- Frontend runtime verification is pending because `npm install` had a Windows permission issue.
-- Backend runtime verification still needs the final API environment setup.
+- True Three.js/React Three Fiber anatomical heart integration is still pending.
+- Deployment is not started.
+- The frontend currently collects a simplified clinical form, so several original dataset features use neutral defaults during inference.
 
 ## Current GitHub Repository
 

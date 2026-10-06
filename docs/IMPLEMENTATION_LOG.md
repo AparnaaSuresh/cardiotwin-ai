@@ -37,3 +37,9 @@
 - RCA best model: Logistic Regression, holdout ROC-AUC `0.7391`, F1 `0.6222`.
 - Documented model results in `docs/MODEL_TRAINING_RESULTS.md`.
 - Kept raw dataset files, local reports, and binary model artifacts out of Git.
+- Installed SHAP and XGBoost dependencies in the local ML environment.
+- Regenerated trained model artifacts with SHAP explainers for all four outputs.
+- Patched model comparison so optional failed candidate models are skipped instead of breaking training.
+- Added backend mapping from simplified API patient input to the original Z-Alizadeh Sani feature schema.
+- Verified backend `/health`, `/model-metadata`, and `/predict` in trained-model mode.
+- Installed frontend dependencies, verified production build, and started the local Vite dev server.

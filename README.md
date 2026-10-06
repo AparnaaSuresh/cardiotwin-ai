@@ -104,9 +104,9 @@ Current local training summary:
 
 | Output | Best Model | ROC-AUC | F1 |
 |---|---|---:|---:|
-| CAD | Random Forest | 0.8798 | 0.9231 |
-| LAD | Random Forest | 0.8378 | 0.8267 |
-| LCX | Random Forest | 0.7095 | 0.4762 |
+| CAD | Random Forest | 0.8786 | 0.9130 |
+| LAD | Random Forest | 0.8400 | 0.8421 |
+| LCX | Random Forest | 0.7061 | 0.4878 |
 | RCA | Logistic Regression | 0.7391 | 0.6222 |
 
 Detailed results are documented in:
@@ -115,7 +115,7 @@ Detailed results are documented in:
 docs/MODEL_TRAINING_RESULTS.md
 ```
 
-Note: SHAP support is included, but real SHAP explainer artifacts require installing `shap` and re-running training.
+Note: SHAP support is included and explainer artifacts have been generated locally. Raw datasets, local reports, and binary model artifacts are intentionally ignored by Git.
 
 ## Frontend
 
