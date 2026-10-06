@@ -16,7 +16,7 @@ UCI Machine Learning Repository: Extension of Z-Alizadeh Sani Dataset
 
 The dataset contains 303 patient records with clinical, ECG, lab, and echo features, plus target labels for CAD, LAD, LCX, and RCA.
 
-Place the dataset CSV here:
+The official dataset has been converted locally to:
 
 ```text
 ml/data/z_alizadeh_sani_extension.csv
@@ -99,6 +99,23 @@ The trainer saves artifacts to:
 ```text
 backend/models/
 ```
+
+Current local training summary:
+
+| Output | Best Model | ROC-AUC | F1 |
+|---|---|---:|---:|
+| CAD | Random Forest | 0.8798 | 0.9231 |
+| LAD | Random Forest | 0.8378 | 0.8267 |
+| LCX | Random Forest | 0.7095 | 0.4762 |
+| RCA | Logistic Regression | 0.7391 | 0.6222 |
+
+Detailed results are documented in:
+
+```text
+docs/MODEL_TRAINING_RESULTS.md
+```
+
+Note: SHAP support is included, but real SHAP explainer artifacts require installing `shap` and re-running training.
 
 ## Frontend
 

@@ -21,7 +21,7 @@ No actual working repository existed in the target local folder.
 
 ## Now: Current State
 
-The project has been started from scratch and pushed to GitHub.
+The project has been started from scratch, pushed to GitHub, and trained locally using the official dataset.
 
 Repository:
 
@@ -41,12 +41,6 @@ Current Git branch:
 master
 ```
 
-Initial commit:
-
-```text
-6c52b61 Initial CardioTwin AI scaffold
-```
-
 ## Completed Work
 
 ## 1. Repository Setup
@@ -56,7 +50,8 @@ Completed:
 - Local project folder prepared.
 - Git repository connected.
 - GitHub remote added.
-- Initial commit pushed.
+- Initial scaffold pushed.
+- Follow-up implementation commits pushed.
 
 Status:
 
@@ -71,6 +66,8 @@ Completed:
 - FastAPI app created.
 - Pydantic schemas added.
 - `/health` endpoint added.
+- `/sample-patients` endpoint added.
+- `/model-metadata` endpoint added.
 - `/predict` endpoint added.
 - Model artifact loader added.
 - Demo fallback predictor added.
@@ -84,16 +81,17 @@ backend/app/schemas.py
 backend/app/predict.py
 backend/app/model_loader.py
 backend/app/risk.py
+backend/app/sample_patients.py
 backend/requirements.txt
 ```
 
 Status:
 
 ```text
-Code created, runtime verification pending dependencies
+Code created, final runtime verification pending API dependency setup.
 ```
 
-## 3. ML Pipeline Scaffold
+## 3. ML Pipeline
 
 Completed:
 
@@ -106,20 +104,29 @@ Completed:
 - Model comparison setup.
 - Evaluation metrics setup.
 - SHAP explainer artifact support.
+- Official dataset downloaded locally.
+- Official Excel dataset converted to CSV.
+- Dataset inspection completed.
+- Real model training completed for CAD, LAD, LCX, and RCA.
+- Local trained artifacts generated.
+- Training metrics documented.
 
 Files:
 
 ```text
 ml/preprocess.py
 ml/train_models.py
+ml/inspect_dataset.py
+ml/convert_official_xlsx.py
 ml/requirements.txt
 ml/data/README.md
+docs/MODEL_TRAINING_RESULTS.md
 ```
 
 Status:
 
 ```text
-Pipeline created, real training pending dataset
+Real training completed locally. SHAP artifact generation pending shap installation.
 ```
 
 ## 4. Frontend Scaffold
@@ -134,6 +141,7 @@ Completed:
 - SHAP-style local explanation panel.
 - SVG-based vessel risk map.
 - Responsive CSS.
+- Sample patient selector support.
 
 Files:
 
@@ -147,7 +155,7 @@ frontend/src/styles.css
 Status:
 
 ```text
-Source created, runtime verification pending dependency install
+Source created, runtime verification pending dependency install.
 ```
 
 ## 5. Documentation
@@ -161,50 +169,36 @@ Completed:
 - Implementation log.
 - Step-by-step implementation phases document.
 - Then-and-now progress report.
-
-Files:
-
-```text
-README.md
-docs/PROJECT_IMPLEMENTATION_PLAN.md
-docs/PROJECT_TRACKING.md
-docs/DOUBTS_AND_DECISIONS.md
-docs/IMPLEMENTATION_LOG.md
-docs/IMPLEMENTATION_PHASES_STEP_BY_STEP.md
-docs/PROGRESS_REPORT_THEN_AND_NOW.md
-```
+- Dataset integration guide.
+- Model training results document.
 
 Status:
 
 ```text
-In progress and updated
+Updated with current real training status.
 ```
 
 ## Current Limitations
 
-## 1. Dataset Not Added Yet
+## 1. Dataset And Model Artifacts Are Local
 
-The official dataset is not yet present in:
+The official dataset is present locally in:
 
 ```text
-ml/data/
+ml/data/z_alizadeh_sani_extension.csv
 ```
 
-Because of this:
+The trained model artifacts are present locally in:
 
-- Real model training has not been run.
-- Real metrics are not available.
-- Real SHAP explanations are not available.
+```text
+backend/models/
+```
 
-## 2. Dependency Installation Not Completed
+They are intentionally ignored by Git because raw datasets and binary artifacts should not be pushed unless required.
 
-Frontend and backend dependency installation had environment permission/network issues earlier.
+## 2. SHAP Artifacts Are Pending
 
-Pending:
-
-- Backend package install.
-- Frontend package install.
-- Local server run.
+SHAP support exists in the project design and training code, but actual explainer files were not generated yet because the `shap` package is not installed in the current environment.
 
 ## 3. 3D Heart Is Temporary
 
@@ -220,17 +214,14 @@ Future target:
 Three.js / React Three Fiber GLB heart model
 ```
 
-## 4. Demo Fallback Is Not A Trained Model
+## 4. Runtime Verification Is Pending
 
-The backend currently includes a deterministic fallback predictor.
+Pending:
 
-Purpose:
-
-```text
-frontend-backend integration testing only
-```
-
-It should not be reported as trained model performance.
+- Backend server run.
+- Frontend package install.
+- Frontend server run.
+- Full frontend-to-backend prediction test.
 
 ## Project Status Table
 
@@ -238,12 +229,12 @@ It should not be reported as trained model performance.
 |---|---|---|
 | GitHub repository | Not connected | Connected and pushed |
 | Backend | Not present | FastAPI scaffold created |
-| ML pipeline | Not present | Training scaffold created |
-| Dataset | Mentioned in problem statement | Not yet added locally |
-| SHAP | Concept discussed | Artifact support added |
+| ML pipeline | Not present | Real local training completed |
+| Dataset | Mentioned in problem statement | Downloaded, converted, inspected locally |
+| SHAP | Concept discussed | Artifact support added, actual artifacts pending |
 | Frontend | Mockups only | React source created |
 | 3D visualization | Concept only | SVG placeholder created |
-| Documentation | Planning scattered | Structured docs created |
+| Documentation | Planning scattered | Structured docs and metrics created |
 | Deployment | Not started | Not started |
 
 ## Immediate Next Work
@@ -251,37 +242,29 @@ It should not be reported as trained model performance.
 The next implementation step is:
 
 ```text
-Add the official dataset CSV and run real model training.
+Generate SHAP artifacts and verify the backend/frontend runtime flow.
 ```
 
 After that:
 
-1. Verify actual dataset columns.
-2. Run `ml/train_models.py`.
-3. Generate model metrics.
-4. Save trained artifacts.
-5. Start backend.
-6. Start frontend.
-7. Test full prediction flow.
-8. Replace SVG with true 3D heart model.
+1. Install SHAP in the ML/backend runtime.
+2. Re-run `ml/train_models.py`.
+3. Confirm SHAP local explanations appear in API output.
+4. Start backend.
+5. Start frontend.
+6. Test full prediction flow.
+7. Replace SVG with true Three.js heart model.
 
 ## Current Project Health
 
 Overall status:
 
 ```text
-Good start. Scaffold is ready. Real ML and runtime verification are pending.
+Good progress. Scaffold is ready and real ML training has been completed locally.
 ```
 
 Main blocker:
 
 ```text
-Official dataset CSV is needed.
+SHAP artifact generation and runtime verification are pending.
 ```
-
-Secondary blocker:
-
-```text
-Dependency installation/runtime verification needs to be completed in the local environment.
-```
-
