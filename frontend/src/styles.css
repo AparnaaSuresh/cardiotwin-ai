@@ -1,5 +1,5 @@
 :root {
-  --bg: #eef4fb;
+  --bg: #edf3fa;
   --panel: #ffffff;
   --soft: #f4f8fd;
   --text: #10203f;
@@ -20,6 +20,11 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(18, 103, 231, 0.13), transparent 28%),
+    radial-gradient(circle at 86% 14%, rgba(239, 68, 68, 0.1), transparent 26%),
+    var(--bg);
 }
 
 button,
@@ -59,7 +64,8 @@ button {
   display: grid;
   place-items: center;
   color: white;
-  background: #1267e7;
+  background: linear-gradient(135deg, #1267e7, #ef4444);
+  box-shadow: 0 12px 30px rgba(18, 103, 231, 0.24);
 }
 
 h1,
@@ -92,6 +98,7 @@ h2 {
   background: var(--panel);
   color: var(--muted);
   font-weight: 700;
+  text-transform: capitalize;
 }
 
 .dashboard {
@@ -106,6 +113,10 @@ h2 {
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 18px 42px rgba(16, 32, 63, 0.08);
+}
+
+.heartCard {
+  border-color: rgba(18, 103, 231, 0.22);
 }
 
 .inputCard,
@@ -192,17 +203,42 @@ select {
   cursor: wait;
 }
 
-.heartCard {
-  min-height: calc(100vh - 100px);
-}
-
 .heartStage {
   position: relative;
   min-height: 520px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f7fbff;
+  border: 1px solid rgba(18, 103, 231, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(235, 244, 255, 0.96)),
+    radial-gradient(circle at 50% 42%, rgba(239, 68, 68, 0.1), transparent 38%);
+  box-shadow: inset 0 0 60px rgba(18, 103, 231, 0.07);
+}
+
+.heartCard {
+  min-height: calc(100vh - 100px);
+}
+
+.tripoBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(18, 103, 231, 0.18);
+  background: #f0f6ff;
+  border-radius: 8px;
+  color: #24446f;
+  font-size: 12px;
+  padding: 9px 10px;
+  margin: -2px 0 12px;
+}
+
+.tripoBanner svg {
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+
+.tripoBanner strong {
+  color: var(--text);
 }
 
 .threeMount {
@@ -228,7 +264,8 @@ select {
   border: 1px solid rgba(16, 32, 63, 0.18);
   border-radius: 8px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
   box-shadow: 0 10px 28px rgba(16, 32, 63, 0.16);
   pointer-events: auto;
   display: grid;
@@ -276,7 +313,7 @@ select {
 .vesselButton {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--soft);
+  background: linear-gradient(180deg, #ffffff, var(--soft));
   padding: 10px;
   text-align: left;
   display: grid;
@@ -300,6 +337,10 @@ select {
   display: grid;
   gap: 12px;
   margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfdff;
 }
 
 .riskRow {

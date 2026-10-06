@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Activity, BarChart3, BrainCircuit, HeartPulse } from "lucide-react";
+import { Activity, BarChart3, BrainCircuit, HeartPulse, Sparkles } from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -98,8 +98,12 @@ function App() {
             <HeartPulse size={21} />
             <div>
               <h2>3D Heart Risk Map</h2>
-              <p>LAD, LCX, and RCA are color-coded by predicted stenosis risk.</p>
+              <p>Tripo3D-ready view with vessel risk overlays.</p>
             </div>
+          </div>
+          <div className="tripoBanner">
+            <Sparkles size={16} />
+            <span>Drop Tripo3D export at <strong>public/models/tripo-heart.glb</strong></span>
           </div>
           <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
           <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
@@ -253,7 +257,7 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
       },
       undefined,
       () => {
-        heartGroup.add(createProceduralHeart(heartMaterial));
+        heartGroup.add(createImageBasedHeart());
       }
     );
 
@@ -356,6 +360,37 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
       </div>
     </div>
   );
+}
+
+function createImageBasedHeart() {
+  const group = new THREE.Group();
+  const texture = new THREE.TextureLoader().load("/assets/heart-reference.png");
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const imageMaterial = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.05,
+    side: THREE.DoubleSide,
+  });
+  const heartPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.45, 4.35, 32, 32), imageMaterial);
+  heartPlane.position.set(0, -0.12, 0.2);
+  group.add(heartPlane);
+
+  const depthMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x9f1f2d,
+    transparent: true,
+    opacity: 0.22,
+    roughness: 0.48,
+    metalness: 0.02,
+  });
+  const backVolume = createProceduralHeart(depthMaterial);
+  backVolume.position.set(0, -0.22, -0.34);
+  backVolume.scale.set(0.82, 0.86, 0.52);
+  group.add(backVolume);
+
+  group.rotation.x = -0.06;
+  return group;
 }
 
 function createProceduralHeart(material) {
