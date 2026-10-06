@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Activity, BarChart3, BrainCircuit, HeartPulse, MessageCircle, Send, Sparkles } from "lucide-react";
+import { Activity, BarChart3, BrainCircuit, HeartPulse, Maximize2, MessageCircle, RotateCcw, Send, Sparkles, Target } from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -29,6 +29,24 @@ const vesselNames = {
   LAD: "Left Anterior Descending",
   LCX: "Left Circumflex",
   RCA: "Right Coronary Artery",
+};
+
+const vesselDetails = {
+  LAD: {
+    title: "LAD - Left Anterior Descending",
+    area: "Front wall and septum",
+    note: "Often clinically important because it supplies a large front portion of the heart.",
+  },
+  LCX: {
+    title: "LCX - Left Circumflex",
+    area: "Lateral and posterior region",
+    note: "Risk here can relate to side/back wall blood supply patterns.",
+  },
+  RCA: {
+    title: "RCA - Right Coronary Artery",
+    area: "Right heart and inferior region",
+    note: "Risk here is often reviewed with inferior wall ECG/echo findings.",
+  },
 };
 
 const requiredFields = [
@@ -119,6 +137,7 @@ function App() {
             <span>Drop Tripo3D export at <strong>public/models/tripo-heart.glb</strong></span>
           </div>
           <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
+          <ArteryDetail selectedTarget={selectedTarget} prediction={predictions[selectedTarget]} />
           <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
         </section>
 
@@ -235,6 +254,25 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
   const stateRef = useRef(null);
   const labelRefs = useRef({});
 
+  function focusSelected() {
+    const state = stateRef.current;
+    if (!state) return;
+    const anchor = state.anchors[selectedTarget];
+    const target = new THREE.Vector3();
+    anchor.getWorldPosition(target);
+    state.desiredTarget.copy(target);
+    state.desiredCamera.set(target.x * 0.45, target.y + 0.3, 3.25);
+    state.focused = true;
+  }
+
+  function resetView() {
+    const state = stateRef.current;
+    if (!state) return;
+    state.desiredTarget.set(0, 0.05, 0);
+    state.desiredCamera.set(0, 1.1, 7.2);
+    state.focused = true;
+  }
+
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return undefined;
@@ -253,8 +291,9 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
-    controls.minDistance = 4.8;
+    controls.minDistance = 2.35;
     controls.maxDistance = 9.5;
+    controls.target.set(0, 0.05, 0);
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 2.3));
     const keyLight = new THREE.DirectionalLight(0xffffff, 3.3);
@@ -357,22 +396,34 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("resize", onResize);
 
+    stateRef.current = {
+      anchors,
+      camera,
+      controls,
+      desiredCamera: new THREE.Vector3(0, 1.1, 7.2),
+      desiredTarget: new THREE.Vector3(0, 0.05, 0),
+      focused: false,
+      riskMarkers,
+      vessels,
+    };
+
     let frameId = 0;
     function animate() {
       frameId = requestAnimationFrame(animate);
-      const time = performance.now() * 0.001;
-      const pulse = 1 + Math.sin(time * 2.4) * 0.012;
-      heartGroup.rotation.y += 0.0025;
-      heartGroup.scale.setScalar(pulse);
       vesselGroup.rotation.y = heartGroup.rotation.y;
       riskGlow.rotation.y = heartGroup.rotation.y;
+      if (stateRef.current?.focused) {
+        camera.position.lerp(stateRef.current.desiredCamera, 0.09);
+        controls.target.lerp(stateRef.current.desiredTarget, 0.09);
+        if (camera.position.distanceTo(stateRef.current.desiredCamera) < 0.03) {
+          stateRef.current.focused = false;
+        }
+      }
       updateRiskLabels(anchors, labelRefs.current, camera, renderer.domElement);
       controls.update();
       renderer.render(scene, camera);
     }
     animate();
-
-    stateRef.current = { vessels, riskMarkers };
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -418,7 +469,34 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
           </button>
         ))}
       </div>
-      <div className="sceneHint">Drag to rotate • Scroll to zoom • Click a vessel</div>
+      <div className="sceneTools">
+        <button type="button" onClick={focusSelected}><Target size={14} /> Focus {selectedTarget}</button>
+        <button type="button" onClick={resetView}><RotateCcw size={14} /> Reset</button>
+      </div>
+      <div className="sceneHint"><Maximize2 size={14} /> Drag to rotate • Scroll to zoom • Click artery risk labels</div>
+    </div>
+  );
+}
+
+function ArteryDetail({ selectedTarget, prediction }) {
+  const details = vesselDetails[selectedTarget];
+  return (
+    <div className="arteryDetail">
+      <div>
+        <span>Selected artery</span>
+        <strong>{details.title}</strong>
+      </div>
+      <div>
+        <span>Risk</span>
+        <strong style={{ color: prediction ? riskColor(prediction.risk_level) : undefined }}>
+          {prediction ? `${asPercent(prediction.probability)} ${prediction.risk_level}` : "--"}
+        </strong>
+      </div>
+      <div>
+        <span>Supplies</span>
+        <strong>{details.area}</strong>
+      </div>
+      <p>{details.note}</p>
     </div>
   );
 }
