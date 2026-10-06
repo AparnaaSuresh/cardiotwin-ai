@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Activity, BarChart3, BrainCircuit, HeartPulse, Sparkles } from "lucide-react";
+import { Activity, BarChart3, BrainCircuit, HeartPulse, MessageCircle, Send, Sparkles } from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -31,6 +31,13 @@ const vesselNames = {
   RCA: "Right Coronary Artery",
 };
 
+const requiredFields = [
+  ["age", "Age"],
+  ["systolic_bp", "Systolic BP"],
+  ["diastolic_bp", "Diastolic BP"],
+  ["cholesterol", "LDL / cholesterol"],
+];
+
 function riskColor(level) {
   if (level === "High") return "#ef4444";
   if (level === "Moderate") return "#eab308";
@@ -55,10 +62,16 @@ function App() {
     setLoading(true);
     setError("");
     try {
+      const validationError = validatePatient(patient);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+      const payload = sanitizePatient(patient);
       const response = await fetch(`${API_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patient),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) {
         const body = await response.text();
@@ -67,7 +80,7 @@ function App() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(`Prediction failed. Check backend at ${API_URL}. ${err.message}`);
+      setError(`Prediction failed. Make sure the backend is running at ${API_URL}.`);
     } finally {
       setLoading(false);
     }
@@ -120,10 +133,28 @@ function App() {
           {error && <div className="error">{error}</div>}
           <RiskSummary predictions={predictions} />
           <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
+          <ExplanationChat result={result} selectedTarget={selectedTarget} />
         </section>
       </section>
     </main>
   );
+}
+
+function validatePatient(patient) {
+  const missing = requiredFields.filter(([field]) => patient[field] === null || patient[field] === "" || Number.isNaN(patient[field]));
+  if (!missing.length) return "";
+  return `Please fill: ${missing.map(([, label]) => label).join(", ")}.`;
+}
+
+function sanitizePatient(patient) {
+  return {
+    ...patient,
+    triglyceride: patient.triglyceride ?? 122,
+    fasting_blood_sugar: patient.fasting_blood_sugar ?? 98,
+    pulse_rate: patient.pulse_rate ?? 70,
+    ef_tte: patient.ef_tte ?? 50,
+    rwma_region: patient.rwma_region || "None",
+  };
 }
 
 function PatientForm({ patient, setPatient, onRun, loading }) {
@@ -202,6 +233,7 @@ function PatientForm({ patient, setPatient, onRun, loading }) {
 function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
   const mountRef = useRef(null);
   const stateRef = useRef(null);
+  const labelRefs = useRef({});
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -234,6 +266,9 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
 
     const vesselGroup = new THREE.Group();
     scene.add(vesselGroup);
+
+    const riskGlow = new THREE.Group();
+    scene.add(riskGlow);
 
     const heartMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xd94b4b,
@@ -282,10 +317,23 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
       ]),
     };
 
+    const anchors = {
+      LAD: new THREE.Object3D(),
+      LCX: new THREE.Object3D(),
+      RCA: new THREE.Object3D(),
+    };
+    anchors.LAD.position.set(-0.72, -0.35, 1.15);
+    anchors.LCX.position.set(1.58, 0.24, 0.48);
+    anchors.RCA.position.set(0.58, -1.28, 0.56);
+
     Object.entries(vessels).forEach(([target, mesh]) => {
       mesh.userData.target = target;
       vesselGroup.add(mesh);
+      vesselGroup.add(anchors[target]);
     });
+
+    const riskMarkers = createRiskMarkers();
+    Object.values(riskMarkers).forEach((marker) => riskGlow.add(marker));
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -312,14 +360,19 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
     let frameId = 0;
     function animate() {
       frameId = requestAnimationFrame(animate);
-      heartGroup.rotation.y += 0.003;
+      const time = performance.now() * 0.001;
+      const pulse = 1 + Math.sin(time * 2.4) * 0.012;
+      heartGroup.rotation.y += 0.0025;
+      heartGroup.scale.setScalar(pulse);
       vesselGroup.rotation.y = heartGroup.rotation.y;
+      riskGlow.rotation.y = heartGroup.rotation.y;
+      updateRiskLabels(anchors, labelRefs.current, camera, renderer.domElement);
       controls.update();
       renderer.render(scene, camera);
     }
     animate();
 
-    stateRef.current = { vessels };
+    stateRef.current = { vessels, riskMarkers };
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -333,12 +386,18 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
 
   useEffect(() => {
     const vessels = stateRef.current?.vessels || {};
+    const riskMarkers = stateRef.current?.riskMarkers || {};
     Object.entries(vessels).forEach(([target, mesh]) => {
       const level = predictions[target]?.risk_level || "Low";
       mesh.material.color.set(riskColor(level));
       mesh.material.emissive.set(target === selectedTarget ? riskColor(level) : "#000000");
-      mesh.material.emissiveIntensity = target === selectedTarget ? 0.55 : 0.12;
+      mesh.material.emissiveIntensity = target === selectedTarget ? 0.75 : 0.18;
       mesh.scale.setScalar(target === selectedTarget ? 1.12 : 1);
+      if (riskMarkers[target]) {
+        riskMarkers[target].material.color.set(riskColor(level));
+        riskMarkers[target].material.opacity = target === selectedTarget ? 0.32 : 0.14;
+        riskMarkers[target].scale.setScalar(target === selectedTarget ? 1.4 : 1);
+      }
     });
   }, [predictions, selectedTarget]);
 
@@ -350,16 +409,32 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
           <button
             type="button"
             key={target}
+            ref={(node) => { labelRefs.current[target] = node; }}
             className={`floatingLabel ${selectedTarget === target ? "active" : ""}`}
             onClick={() => setSelectedTarget(target)}
           >
             <span>{target}</span>
-            <strong>{predictions[target] ? asPercent(predictions[target].probability) : "--"}</strong>
+            <strong>{predictions[target] ? `${asPercent(predictions[target].probability)} ${predictions[target].risk_level}` : "--"}</strong>
           </button>
         ))}
       </div>
+      <div className="sceneHint">Drag to rotate • Scroll to zoom • Click a vessel</div>
     </div>
   );
+}
+
+function updateRiskLabels(anchors, labels, camera, canvas) {
+  Object.entries(anchors).forEach(([target, anchor]) => {
+    const label = labels[target];
+    if (!label) return;
+    const position = new THREE.Vector3();
+    anchor.getWorldPosition(position);
+    position.project(camera);
+    const x = (position.x * 0.5 + 0.5) * canvas.clientWidth;
+    const y = (-position.y * 0.5 + 0.5) * canvas.clientHeight;
+    label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+    label.style.opacity = position.z < 1 ? "1" : "0.22";
+  });
 }
 
 function createImageBasedHeart() {
@@ -434,6 +509,20 @@ function createVessel(points) {
       emissiveIntensity: 0.2,
     })
   );
+}
+
+function createRiskMarkers() {
+  const material = new THREE.MeshBasicMaterial({ color: 0x16a34a, transparent: true, opacity: 0.18 });
+  const marker = (x, y, z) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 16), material.clone());
+    mesh.position.set(x, y, z);
+    return mesh;
+  };
+  return {
+    LAD: marker(-0.62, -0.45, 1.02),
+    LCX: marker(1.55, 0.25, 0.43),
+    RCA: marker(0.48, -1.15, 0.55),
+  };
 }
 
 function createTube(points, radius, material) {
@@ -519,6 +608,81 @@ function ShapExplanation({ prediction, selectedTarget }) {
       ))}
     </div>
   );
+}
+
+function ExplanationChat({ result, selectedTarget }) {
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      text: "Ask me why the model predicted this risk, which vessel is highest, or what the SHAP factors mean.",
+    },
+  ]);
+
+  function askChat() {
+    const trimmed = question.trim();
+    if (!trimmed) return;
+    const answer = explainFromResult(trimmed, result, selectedTarget);
+    setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "assistant", text: answer }]);
+    setQuestion("");
+  }
+
+  return (
+    <div className="chatBox">
+      <div className="panelHead compact">
+        <MessageCircle size={19} />
+        <div>
+          <h2>Explainability Chat</h2>
+          <p>Answers are grounded only in the current model output and SHAP values.</p>
+        </div>
+      </div>
+      <div className="chatMessages">
+        {messages.map((message, index) => (
+          <div className={`chatBubble ${message.role}`} key={`${message.role}-${index}`}>{message.text}</div>
+        ))}
+      </div>
+      <div className="chatInput">
+        <input
+          value={question}
+          placeholder="Ask: why is LAD high?"
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") askChat();
+          }}
+        />
+        <button type="button" onClick={askChat} aria-label="Ask explainability question"><Send size={16} /></button>
+      </div>
+    </div>
+  );
+}
+
+function explainFromResult(question, result, selectedTarget) {
+  if (!result?.predictions) {
+    return "Run a prediction first. Then I can explain the model probabilities and SHAP feature contributions.";
+  }
+  const q = question.toLowerCase();
+  const entries = Object.entries(result.predictions);
+  const highest = entries.reduce((best, current) => current[1].probability > best[1].probability ? current : best);
+  const selected = result.predictions[selectedTarget];
+  const top = selected?.top_features || [];
+  const topIncreasing = top.filter((item) => item.impact > 0).slice(0, 3);
+  const topDecreasing = top.filter((item) => item.impact < 0).slice(0, 2);
+
+  if (q.includes("highest") || q.includes("most") || q.includes("which")) {
+    return `${highest[0]} is the highest risk output at ${asPercent(highest[1].probability)} (${highest[1].risk_level}). This is the main vessel/target to discuss first.`;
+  }
+  if (q.includes("shap") || q.includes("explain")) {
+    return `SHAP shows which features pushed the ${selectedTarget} prediction up or down. Positive values increase predicted risk; negative values reduce it for this patient.`;
+  }
+  if (q.includes("why") || q.includes(selectedTarget.toLowerCase())) {
+    const up = topIncreasing.map((item) => `${item.feature} (${item.impact > 0 ? "+" : ""}${item.impact})`).join(", ") || "no strong positive SHAP factors";
+    const down = topDecreasing.map((item) => `${item.feature} (${item.impact})`).join(", ") || "no strong negative SHAP factors";
+    return `${selectedTarget} is ${asPercent(selected.probability)} ${selected.risk_level}. The main factors increasing risk are ${up}. Factors reducing risk are ${down}.`;
+  }
+  if (q.includes("doctor") || q.includes("clinical")) {
+    return "This is a decision-support prototype, not a diagnosis. A doctor can use the probability, vessel map, and SHAP factors to decide what needs closer clinical review.";
+  }
+  return `Current summary: CAD ${asPercent(result.predictions.CAD.probability)} ${result.predictions.CAD.risk_level}, LAD ${asPercent(result.predictions.LAD.probability)} ${result.predictions.LAD.risk_level}, LCX ${asPercent(result.predictions.LCX.probability)} ${result.predictions.LCX.risk_level}, RCA ${asPercent(result.predictions.RCA.probability)} ${result.predictions.RCA.risk_level}.`;
 }
 
 createRoot(document.getElementById("root")).render(<App />);
