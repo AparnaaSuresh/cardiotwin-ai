@@ -1,18 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  Activity,
-  AlertTriangle,
-  BarChart3,
-  Database,
-  HeartPulse,
-  RotateCcw,
-} from "lucide-react";
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { Activity, BarChart3, BrainCircuit, HeartPulse } from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-const samplePatient = {
+const initialPatient = {
   age: 62,
   sex: "Male",
   systolic_bp: 142,
@@ -29,10 +25,16 @@ const samplePatient = {
   ef_tte: 45,
 };
 
+const vesselNames = {
+  LAD: "Left Anterior Descending",
+  LCX: "Left Circumflex",
+  RCA: "Right Coronary Artery",
+};
+
 function riskColor(level) {
-  if (level === "High") return "var(--red)";
-  if (level === "Moderate") return "var(--yellow)";
-  return "var(--green)";
+  if (level === "High") return "#ef4444";
+  if (level === "Moderate") return "#eab308";
+  return "#16a34a";
 }
 
 function asPercent(value) {
@@ -40,31 +42,14 @@ function asPercent(value) {
 }
 
 function App() {
-  const [patient, setPatient] = useState(samplePatient);
+  const [patient, setPatient] = useState(initialPatient);
   const [result, setResult] = useState(null);
   const [selectedTarget, setSelectedTarget] = useState("LAD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [samples, setSamples] = useState({});
-  const [sampleStatus, setSampleStatus] = useState("Using built-in sample");
 
-  const selectedPrediction = result?.predictions?.[selectedTarget];
-
-  useEffect(() => {
-    async function loadSamples() {
-      try {
-        const response = await fetch(`${API_URL}/sample-patients`);
-        if (!response.ok) throw new Error("Sample API unavailable");
-        const data = await response.json();
-        setSamples(data);
-        setSampleStatus("Loaded from backend");
-      } catch {
-        setSamples({ high_lad_risk: samplePatient });
-        setSampleStatus("Using built-in sample");
-      }
-    }
-    loadSamples();
-  }, []);
+  const predictions = result?.predictions || {};
+  const selectedPrediction = predictions[selectedTarget];
 
   async function runPrediction() {
     setLoading(true);
@@ -82,107 +67,62 @@ function App() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(`${err.message}. Check that the backend is running at ${API_URL}.`);
+      setError(`Prediction failed. Check backend at ${API_URL}. ${err.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  const predictions = result?.predictions || {};
+  useEffect(() => {
+    runPrediction();
+  }, []);
 
   return (
     <main className="shell">
-      <header className="header">
+      <header className="topbar">
         <div className="brand">
-          <div className="brandIcon"><HeartPulse size={26} /></div>
+          <div className="brandIcon"><HeartPulse size={25} /></div>
           <div>
             <h1>CardioTwin AI</h1>
-            <p>Explainable 3D cardiac risk visualization for CAD, LAD, LCX, and RCA.</p>
+            <p>3D coronary risk mapping with ML prediction and SHAP explanation</p>
           </div>
         </div>
-        <div className="modeBadge">
-          {result?.model_mode ? `Mode: ${result.model_mode}` : "Dataset-ready prototype"}
-        </div>
+        <span className="modeBadge">{result?.model_mode || "trained-model"}</span>
       </header>
 
-      <section className="layout">
-        <PatientForm
-          patient={patient}
-          setPatient={setPatient}
-          onRun={runPrediction}
-          loading={loading}
-          samples={samples}
-          sampleStatus={sampleStatus}
-        />
+      <section className="dashboard">
+        <PatientForm patient={patient} setPatient={setPatient} onRun={runPrediction} loading={loading} />
 
-        <section className="heartPanel card">
-          <div className="sectionTitle">
-            <Database size={20} />
+        <section className="card heartCard">
+          <div className="panelHead">
+            <HeartPulse size={21} />
             <div>
-              <h2>3D-inspired Vessel Risk Map</h2>
-              <p>Replaceable SVG layer now; Three.js GLB heart can plug in later.</p>
+              <h2>3D Heart Risk Map</h2>
+              <p>LAD, LCX, and RCA are color-coded by predicted stenosis risk.</p>
             </div>
           </div>
-          <HeartMap predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
-          <div className="vesselGrid">
-            {["LAD", "LCX", "RCA"].map((target) => (
-              <button
-                type="button"
-                className={`vesselButton ${selectedTarget === target ? "active" : ""}`}
-                key={target}
-                onClick={() => setSelectedTarget(target)}
-              >
-                <span>{target}</span>
-                <strong>{predictions[target] ? asPercent(predictions[target].probability) : "--"}</strong>
-              </button>
-            ))}
-          </div>
+          <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
+          <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
         </section>
 
-        <section className="card">
-          <div className="sectionTitle">
-            <BarChart3 size={20} />
+        <section className="card resultCard">
+          <div className="panelHead">
+            <BarChart3 size={21} />
             <div>
-              <h2>Prediction Results</h2>
-              <p>Risk probabilities and local SHAP-style feature impact.</p>
+              <h2>Risk Levels</h2>
+              <p>Model probabilities for overall CAD and each vessel.</p>
             </div>
           </div>
-
           {error && <div className="error">{error}</div>}
-          {!result && !error && <EmptyState />}
-          {result && (
-            <>
-              <RiskSummary predictions={predictions} />
-              <Explanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
-              <div className="disclaimer">
-                <AlertTriangle size={16} />
-                <span>{result.disclaimer}</span>
-              </div>
-            </>
-          )}
+          <RiskSummary predictions={predictions} />
+          <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
         </section>
-      </section>
-
-      <section className="workflow card">
-        {[
-          ["Clinical input", "Structured patient features"],
-          ["Preprocess", "Validation and leakage-safe features"],
-          ["Predict", "CAD + LAD + LCX + RCA models"],
-          ["Explain", "SHAP global/local impact"],
-          ["Visualize", "Vessel-specific risk map"],
-        ].map(([title, text], index) => (
-          <div className="flowStep" key={title}>
-            <span>{index + 1}</span>
-            <strong>{title}</strong>
-            <p>{text}</p>
-          </div>
-        ))}
       </section>
     </main>
   );
 }
 
-function PatientForm({ patient, setPatient, onRun, loading, samples, sampleStatus }) {
+function PatientForm({ patient, setPatient, onRun, loading }) {
   function update(field, value) {
     setPatient((current) => ({ ...current, [field]: value }));
   }
@@ -191,40 +131,22 @@ function PatientForm({ patient, setPatient, onRun, loading, samples, sampleStatu
     ["age", "Age"],
     ["systolic_bp", "Systolic BP"],
     ["diastolic_bp", "Diastolic BP"],
-    ["cholesterol", "Cholesterol"],
+    ["cholesterol", "LDL / cholesterol"],
     ["triglyceride", "Triglyceride"],
-    ["fasting_blood_sugar", "Fasting blood sugar"],
+    ["fasting_blood_sugar", "Fasting sugar"],
     ["pulse_rate", "Pulse rate"],
     ["ef_tte", "EF-TTE"],
   ];
 
   return (
-    <section className="card">
-      <div className="sectionTitle">
-        <Activity size={20} />
+    <section className="card inputCard">
+      <div className="panelHead">
+        <Activity size={21} />
         <div>
-          <h2>Patient Clinical Input</h2>
-          <p>{sampleStatus}; CSV batch upload can be added next.</p>
+          <h2>Patient Input</h2>
+          <p>Enter clinical values and run prediction.</p>
         </div>
       </div>
-
-      <label>
-        Sample patient
-        <select
-          defaultValue=""
-          onChange={(event) => {
-            const selected = samples[event.target.value];
-            if (selected) setPatient(selected);
-          }}
-        >
-          <option value="" disabled>Select sample case</option>
-          {Object.keys(samples).map((name) => (
-            <option key={name} value={name}>
-              {name.replaceAll("_", " ")}
-            </option>
-          ))}
-        </select>
-      </label>
 
       <label>
         Sex
@@ -267,42 +189,245 @@ function PatientForm({ patient, setPatient, onRun, loading, samples, sampleStatu
       </div>
 
       <button className="primary" type="button" onClick={onRun} disabled={loading}>
-        {loading ? "Running..." : "Run AI Analysis"}
+        {loading ? "Running..." : "Run Prediction"}
       </button>
     </section>
   );
 }
 
-function HeartMap({ predictions, selectedTarget, setSelectedTarget }) {
-  const vessel = (target, fallback) => riskColor(predictions[target]?.risk_level || fallback);
+function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
+  const mountRef = useRef(null);
+  const stateRef = useRef(null);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return undefined;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf7fbff);
+
+    const camera = new THREE.PerspectiveCamera(38, mount.clientWidth / mount.clientHeight, 0.1, 100);
+    camera.position.set(0, 1.1, 7.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(mount.clientWidth, mount.clientHeight);
+    mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 4.8;
+    controls.maxDistance = 9.5;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 2.3));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.3);
+    keyLight.position.set(4, 5, 5);
+    scene.add(keyLight);
+
+    const heartGroup = new THREE.Group();
+    scene.add(heartGroup);
+
+    const vesselGroup = new THREE.Group();
+    scene.add(vesselGroup);
+
+    const heartMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xd94b4b,
+      roughness: 0.48,
+      metalness: 0.02,
+      clearcoat: 0.3,
+    });
+
+    const loader = new GLTFLoader();
+    loader.load(
+      "/models/tripo-heart.glb",
+      (gltf) => {
+        const model = gltf.scene;
+        model.scale.setScalar(2.2);
+        model.position.set(0, -0.5, 0);
+        model.traverse((child) => {
+          if (child.isMesh) child.material = child.material || heartMaterial;
+        });
+        heartGroup.clear();
+        heartGroup.add(model);
+      },
+      undefined,
+      () => {
+        heartGroup.add(createProceduralHeart(heartMaterial));
+      }
+    );
+
+    const vessels = {
+      LAD: createVessel([
+        [-0.05, 1.15, 0.75],
+        [-0.35, 0.4, 1.05],
+        [-0.62, -0.45, 1.0],
+        [-0.4, -1.45, 0.6],
+      ]),
+      LCX: createVessel([
+        [0.1, 1.05, 0.78],
+        [0.9, 0.85, 0.72],
+        [1.55, 0.25, 0.4],
+        [1.8, -0.45, 0.02],
+      ]),
+      RCA: createVessel([
+        [0.38, 0.9, 0.7],
+        [0.15, 0.0, 1.08],
+        [0.2, -0.8, 0.95],
+        [0.58, -1.4, 0.35],
+      ]),
+    };
+
+    Object.entries(vessels).forEach(([target, mesh]) => {
+      mesh.userData.target = target;
+      vesselGroup.add(mesh);
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function onPointerDown(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(Object.values(vessels), false)[0];
+      if (hit?.object?.userData?.target) setSelectedTarget(hit.object.userData.target);
+    }
+
+    function onResize() {
+      if (!mount.clientWidth || !mount.clientHeight) return;
+      camera.aspect = mount.clientWidth / mount.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mount.clientWidth, mount.clientHeight);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("resize", onResize);
+
+    let frameId = 0;
+    function animate() {
+      frameId = requestAnimationFrame(animate);
+      heartGroup.rotation.y += 0.003;
+      vesselGroup.rotation.y = heartGroup.rotation.y;
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    stateRef.current = { vessels };
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("resize", onResize);
+      controls.dispose();
+      renderer.dispose();
+      mount.removeChild(renderer.domElement);
+    };
+  }, [setSelectedTarget]);
+
+  useEffect(() => {
+    const vessels = stateRef.current?.vessels || {};
+    Object.entries(vessels).forEach(([target, mesh]) => {
+      const level = predictions[target]?.risk_level || "Low";
+      mesh.material.color.set(riskColor(level));
+      mesh.material.emissive.set(target === selectedTarget ? riskColor(level) : "#000000");
+      mesh.material.emissiveIntensity = target === selectedTarget ? 0.55 : 0.12;
+      mesh.scale.setScalar(target === selectedTarget ? 1.12 : 1);
+    });
+  }, [predictions, selectedTarget]);
+
   return (
-    <svg className="heartSvg" viewBox="0 0 520 360" role="img" aria-label="Heart map showing LAD, LCX, and RCA risk colors">
-      <path className="heartShape" d="M260 310 C130 224 82 160 98 90 C112 28 184 22 229 67 C247 85 255 101 260 118 C265 101 273 85 291 67 C336 22 408 28 422 90 C438 160 390 224 260 310 Z" />
-      <path className="heartDivider" d="M260 310 C252 225 253 166 260 118" />
-      <g onClick={() => setSelectedTarget("LAD")}>
-        <path className={selectedTarget === "LAD" ? "vessel selected" : "vessel"} d="M253 118 C205 126 177 154 154 210 C139 235 126 253 104 270" stroke={vessel("LAD", "High")} />
-      </g>
-      <g onClick={() => setSelectedTarget("LCX")}>
-        <path className={selectedTarget === "LCX" ? "vessel selected" : "vessel"} d="M270 122 C321 128 354 160 373 210 C394 238 413 255 438 270" stroke={vessel("LCX", "Moderate")} />
-      </g>
-      <g onClick={() => setSelectedTarget("RCA")}>
-        <path className={selectedTarget === "RCA" ? "vessel selected" : "vessel"} d="M276 135 C255 181 255 222 276 273" stroke={vessel("RCA", "Low")} />
-      </g>
-      <VesselLabel x="92" y="198" target="LAD" prediction={predictions.LAD} />
-      <VesselLabel x="355" y="198" target="LCX" prediction={predictions.LCX} />
-      <VesselLabel x="224" y="282" target="RCA" prediction={predictions.RCA} />
-    </svg>
+    <div className="heartStage">
+      <div ref={mountRef} className="threeMount" />
+      <div className="heartLabels">
+        {["LAD", "LCX", "RCA"].map((target) => (
+          <button
+            type="button"
+            key={target}
+            className={`floatingLabel ${selectedTarget === target ? "active" : ""}`}
+            onClick={() => setSelectedTarget(target)}
+          >
+            <span>{target}</span>
+            <strong>{predictions[target] ? asPercent(predictions[target].probability) : "--"}</strong>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function VesselLabel({ x, y, target, prediction }) {
+function createProceduralHeart(material) {
+  const group = new THREE.Group();
+  const left = new THREE.Mesh(new THREE.SphereGeometry(1.05, 48, 32), material);
+  left.position.set(-0.72, 0.62, 0);
+  left.scale.set(0.92, 1.0, 0.8);
+  group.add(left);
+
+  const right = left.clone();
+  right.position.x = 0.72;
+  group.add(right);
+
+  const body = new THREE.Mesh(new THREE.ConeGeometry(1.55, 2.6, 64), material);
+  body.rotation.z = Math.PI;
+  body.position.set(0, -0.48, 0);
+  body.scale.set(1.05, 1.0, 0.78);
+  group.add(body);
+
+  const aortaMaterial = new THREE.MeshPhysicalMaterial({ color: 0xb83a3a, roughness: 0.38 });
+  const aorta = createTube([
+    [-0.2, 1.45, -0.05],
+    [-0.15, 2.1, 0.05],
+    [0.5, 2.3, 0.0],
+    [0.72, 1.65, -0.12],
+  ], 0.13, aortaMaterial);
+  group.add(aorta);
+
+  group.rotation.z = -0.08;
+  return group;
+}
+
+function createVessel(points) {
+  return createTube(
+    points,
+    0.045,
+    new THREE.MeshStandardMaterial({
+      color: 0x16a34a,
+      roughness: 0.35,
+      emissive: 0x000000,
+      emissiveIntensity: 0.2,
+    })
+  );
+}
+
+function createTube(points, radius, material) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  const geometry = new THREE.TubeGeometry(curve, 80, radius, 16, false);
+  return new THREE.Mesh(geometry, material);
+}
+
+function VesselSelector({ predictions, selectedTarget, setSelectedTarget }) {
   return (
-    <g>
-      <rect x={x} y={y} width="92" height="34" rx="17" className="labelBg" />
-      <text x={x + 46} y={y + 22} textAnchor="middle" className="labelText">
-        {target} {prediction ? asPercent(prediction.probability) : "--"}
-      </text>
-    </g>
+    <div className="vesselGrid">
+      {["LAD", "LCX", "RCA"].map((target) => {
+        const item = predictions[target];
+        return (
+          <button
+            type="button"
+            className={`vesselButton ${selectedTarget === target ? "active" : ""}`}
+            key={target}
+            onClick={() => setSelectedTarget(target)}
+          >
+            <span>{target}</span>
+            <small>{vesselNames[target]}</small>
+            <strong style={{ color: item ? riskColor(item.risk_level) : undefined }}>
+              {item ? `${asPercent(item.probability)} ${item.risk_level}` : "--"}
+            </strong>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -317,10 +442,14 @@ function RiskSummary({ predictions }) {
             <div className="track">
               <div
                 className="fill"
-                style={{ width: item ? asPercent(item.probability) : "0%", background: item ? riskColor(item.risk_level) : "var(--muted)" }}
+                style={{
+                  width: item ? asPercent(item.probability) : "0%",
+                  background: item ? riskColor(item.risk_level) : "#d7e0ec",
+                }}
               />
             </div>
             <strong>{item ? asPercent(item.probability) : "--"}</strong>
+            <em style={{ color: item ? riskColor(item.risk_level) : undefined }}>{item?.risk_level || "--"}</em>
           </div>
         );
       })}
@@ -328,35 +457,31 @@ function RiskSummary({ predictions }) {
   );
 }
 
-function Explanation({ prediction, selectedTarget }) {
-  if (!prediction) return null;
+function ShapExplanation({ prediction, selectedTarget }) {
   return (
-    <div className="explain">
-      <h3>{selectedTarget} local explanation</h3>
-      {prediction.top_features.map((feature) => (
+    <div className="shapBox">
+      <div className="panelHead compact">
+        <BrainCircuit size={19} />
+        <div>
+          <h2>SHAP Explanation</h2>
+          <p>{selectedTarget}: top factors pushing the prediction up or down.</p>
+        </div>
+      </div>
+      {!prediction && <div className="emptySmall">Run prediction to view SHAP values.</div>}
+      {prediction?.top_features?.map((feature) => (
         <div className="impactRow" key={feature.feature}>
           <span>{feature.feature}</span>
           <div className="impactTrack">
             <div
               style={{
-                width: `${Math.min(100, Math.abs(feature.impact) * 400)}%`,
-                background: feature.impact >= 0 ? "var(--red)" : "var(--green)",
+                width: `${Math.max(7, Math.min(100, Math.abs(feature.impact) * 380))}%`,
+                background: feature.impact >= 0 ? "#ef4444" : "#16a34a",
               }}
             />
           </div>
           <strong>{feature.impact > 0 ? "+" : ""}{feature.impact}</strong>
         </div>
       ))}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="empty">
-      <RotateCcw size={28} />
-      <strong>Run a prediction to view risk and explanations.</strong>
-      <p>The API will use trained models once artifacts are available; otherwise it reports demo-fallback mode.</p>
     </div>
   );
 }

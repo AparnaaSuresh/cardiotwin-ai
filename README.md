@@ -131,6 +131,16 @@ Optional API URL:
 set VITE_API_URL=http://localhost:8000
 ```
 
+## 3D Heart Model
+
+The frontend uses Three.js for the interactive 3D heart view. To use a Tripo3D AI generated heart model, export it as GLB and place it here:
+
+```text
+frontend/public/models/tripo-heart.glb
+```
+
+If this file is not present, the app uses a built-in procedural 3D heart fallback with LAD, LCX, and RCA vessel overlays.
+
 ## Safety
 
 This project is an educational decision-support prototype only. It is not a clinical diagnostic device and must not replace qualified medical evaluation.
