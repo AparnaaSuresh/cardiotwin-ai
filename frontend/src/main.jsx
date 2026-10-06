@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const samplePatient = {
   age: 62,
@@ -82,7 +82,7 @@ function App() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err.message);
+      setError(`${err.message}. Check that the backend is running at ${API_URL}.`);
     } finally {
       setLoading(false);
     }
