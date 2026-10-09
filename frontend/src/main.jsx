@@ -91,6 +91,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
+  const [assessmentId, setAssessmentId] = useState(0);
 
   const predictions = result?.predictions || {};
   const selectedPrediction = predictions[selectedTarget];
@@ -122,6 +123,7 @@ function App() {
       const data = await response.json();
       setResult(data);
       setSelectedFinding(buildFinding(selectedTarget, data.predictions?.[selectedTarget]));
+      setAssessmentId((current) => current + 1);
       saveHistory(data, payload);
     } catch (err) {
       setError(`Prediction failed. Make sure the backend is running at ${API_URL}.`);
@@ -227,7 +229,12 @@ function App() {
           {error && <div className="error">{error}</div>}
           <RiskSummary predictions={predictions} />
           <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
-          <ExplanationChat result={result} selectedTarget={selectedTarget} selectedFinding={selectedFinding} />
+          <ExplanationChat
+            result={result}
+            selectedTarget={selectedTarget}
+            selectedFinding={selectedFinding}
+            assessmentId={assessmentId}
+          />
           <ReportPanel history={history} onDownload={downloadReport} hasResult={Boolean(result)} />
         </section>
       </section>
@@ -960,17 +967,17 @@ function ShapExplanation({ prediction, selectedTarget }) {
   );
 }
 
-function ExplanationChat({ result, selectedTarget, selectedFinding }) {
+function ExplanationChat({ result, selectedTarget, selectedFinding, assessmentId }) {
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      text: "Ask me why the model predicted this risk, which vessel is highest, or what the SHAP factors mean.",
-    },
-  ]);
+  const [messages, setMessages] = useState(() => buildStarterMessages(result, selectedTarget));
 
-  function askChat() {
-    const trimmed = question.trim();
+  useEffect(() => {
+    setQuestion("");
+    setMessages(buildStarterMessages(result, selectedTarget));
+  }, [assessmentId]);
+
+  function askChat(customQuestion) {
+    const trimmed = (customQuestion ?? question).trim();
     if (!trimmed) return;
     const answer = explainFromResult(trimmed, result, selectedTarget, selectedFinding);
     setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "assistant", text: answer }]);
@@ -982,10 +989,11 @@ function ExplanationChat({ result, selectedTarget, selectedFinding }) {
       <div className="panelHead compact">
         <MessageCircle size={19} />
         <div>
-          <h2>Explainability Chat</h2>
-          <p>Answers are grounded only in the current model output and SHAP values.</p>
+          <h2>Mini Heart Explainability Assistant</h2>
+          <p>Resets for every patient and answers only from the current prediction.</p>
         </div>
       </div>
+      <MiniHeartAssistant result={result} selectedTarget={selectedTarget} onAsk={askChat} />
       <div className="chatMessages">
         {messages.map((message, index) => (
           <div className={`chatBubble ${message.role}`} key={`${message.role}-${index}`}>{message.text}</div>
@@ -1006,6 +1014,57 @@ function ExplanationChat({ result, selectedTarget, selectedFinding }) {
   );
 }
 
+function MiniHeartAssistant({ result, selectedTarget, onAsk }) {
+  const selected = result?.predictions?.[selectedTarget];
+  const level = selected?.risk_level || "Waiting";
+  const prompts = [
+    "Why is this risk high?",
+    "What does SHAP mean here?",
+    "What should I not claim?",
+    "Which vessel needs attention first?",
+  ];
+
+  return (
+    <div className="miniHeartAssistant">
+      <div className="miniHeartAvatar" aria-hidden="true">
+        <HeartPulse size={24} />
+      </div>
+      <div className="miniHeartText">
+        <strong>{selectedTarget} assistant · {level}</strong>
+        <span>
+          I can explain this patient&apos;s model result, SHAP factors, and limitations. I will not give a diagnosis or
+          invent clinical findings.
+        </span>
+        <div className="suggestionChips">
+          {prompts.map((prompt) => (
+            <button key={prompt} type="button" onClick={() => onAsk(prompt)}>
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildStarterMessages(result, selectedTarget) {
+  if (!result?.predictions?.[selectedTarget]) {
+    return [
+      {
+        role: "assistant",
+        text: "Run an assessment first. Then I will explain this patient only, not old patient results.",
+      },
+    ];
+  }
+  const selected = result.predictions[selectedTarget];
+  return [
+    {
+      role: "assistant",
+      text: `New patient loaded. ${selectedTarget} is ${asPercent(selected.probability)} ${selected.risk_level}. Ask about SHAP, highest vessel risk, or what not to claim from this output.`,
+    },
+  ];
+}
+
 function explainFromResult(question, result, selectedTarget, selectedFinding) {
   if (!result?.predictions) {
     return "Run a prediction first. Then I can explain the model probabilities and SHAP feature contributions.";
@@ -1023,6 +1082,12 @@ function explainFromResult(question, result, selectedTarget, selectedFinding) {
   }
   if (q.includes("shap") || q.includes("explain")) {
     return `SHAP shows which features pushed the ${selectedTarget} prediction up or down. Positive values increase predicted risk; negative values reduce it for this patient.`;
+  }
+  if (q.includes("not") || q.includes("avoid") || q.includes("wrong") || q.includes("claim")) {
+    return "Do not claim this is a medical diagnosis, do not say the 3D marker is an exact angiography stenosis measurement, do not enter guessed patient values as real values, and do not present SHAP as causation. Say it is a model-based explanation for this structured-data prediction.";
+  }
+  if (q.includes("suggest") || q.includes("advice") || q.includes("next")) {
+    return "Useful next step for presentation: highlight the highest probability vessel, show the top SHAP factors, then state the limitation clearly: the model supports clinical decision review, but a clinician must confirm with proper tests.";
   }
   if (q.includes("defect") || q.includes("stenosis") || q.includes("narrow")) {
     const finding = selectedFinding || buildFinding(selectedTarget, selected);

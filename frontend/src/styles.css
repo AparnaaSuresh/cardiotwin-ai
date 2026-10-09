@@ -1431,3 +1431,89 @@ body::before {
 .sceneTools {
   z-index: 2;
 }
+
+.miniHeartAssistant {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid rgba(255, 36, 56, 0.24);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255, 36, 56, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 36, 56, 0.035)),
+    rgba(0, 0, 0, 0.38);
+}
+
+.miniHeartAvatar {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 80, 92, 0.48);
+  border-radius: 50%;
+  color: white;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.24), transparent 28%),
+    linear-gradient(135deg, #ff2438, #6f0710);
+  box-shadow: 0 0 34px rgba(255, 36, 56, 0.34);
+  animation: miniHeartBeat 2.4s ease-in-out infinite;
+}
+
+.miniHeartText {
+  display: grid;
+  gap: 6px;
+}
+
+.miniHeartText strong {
+  color: white;
+  font-size: 14px;
+}
+
+.miniHeartText span {
+  color: #cdbcc2;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.suggestionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.suggestionChips button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #ffe8eb;
+  background: rgba(255, 36, 56, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.suggestionChips button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 36, 56, 0.72);
+  background: rgba(255, 36, 56, 0.18);
+}
+
+@keyframes miniHeartBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.08);
+  }
+  32% {
+    transform: scale(0.98);
+  }
+  46% {
+    transform: scale(1.04);
+  }
+}
