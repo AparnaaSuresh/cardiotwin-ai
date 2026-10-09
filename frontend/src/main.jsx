@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Activity, BarChart3, BrainCircuit, HeartPulse, Maximize2, MessageCircle, RotateCcw, Send, Sparkles, Target } from "lucide-react";
+import { Activity, BarChart3, BrainCircuit, HeartPulse, Maximize2, MessageCircle, RotateCcw, Search, Send, Target } from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -70,11 +70,17 @@ function App() {
   const [patient, setPatient] = useState(initialPatient);
   const [result, setResult] = useState(null);
   const [selectedTarget, setSelectedTarget] = useState("LAD");
+  const [selectedFinding, setSelectedFinding] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const predictions = result?.predictions || {};
   const selectedPrediction = predictions[selectedTarget];
+
+  function selectTarget(target) {
+    setSelectedTarget(target);
+    setSelectedFinding(buildFinding(target, predictions[target]));
+  }
 
   async function runPrediction() {
     setLoading(true);
@@ -97,6 +103,7 @@ function App() {
       }
       const data = await response.json();
       setResult(data);
+      setSelectedFinding(buildFinding(selectedTarget, data.predictions?.[selectedTarget]));
     } catch (err) {
       setError(`Prediction failed. Make sure the backend is running at ${API_URL}.`);
     } finally {
@@ -115,7 +122,7 @@ function App() {
           <div className="brandIcon"><HeartPulse size={25} /></div>
           <div>
             <h1>CardioTwin AI</h1>
-            <p>3D coronary risk mapping with ML prediction and SHAP explanation</p>
+            <p>Interactive coronary inspection with vessel risk and SHAP explanation</p>
           </div>
         </div>
         <span className="modeBadge">{result?.model_mode || "trained-model"}</span>
@@ -128,17 +135,18 @@ function App() {
           <div className="panelHead">
             <HeartPulse size={21} />
             <div>
-              <h2>3D Heart Risk Map</h2>
-              <p>Tripo3D-ready view with vessel risk overlays.</p>
+              <h2>Coronary 3D Inspection</h2>
+              <p>Rotate, zoom, and inspect artery-level risk markers.</p>
             </div>
           </div>
-          <div className="tripoBanner">
-            <Sparkles size={16} />
-            <span>Drop Tripo3D export at <strong>public/models/tripo-heart.glb</strong></span>
+          <div className="scanStrip">
+            <span><Search size={14} /> Interactive arteries</span>
+            <span>Defect markers</span>
+            <span>SHAP linked</span>
           </div>
-          <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
-          <ArteryDetail selectedTarget={selectedTarget} prediction={predictions[selectedTarget]} />
-          <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={setSelectedTarget} />
+          <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} setSelectedFinding={setSelectedFinding} />
+          <ArteryDetail selectedTarget={selectedTarget} prediction={predictions[selectedTarget]} selectedFinding={selectedFinding} />
+          <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} />
         </section>
 
         <section className="card resultCard">
@@ -152,11 +160,26 @@ function App() {
           {error && <div className="error">{error}</div>}
           <RiskSummary predictions={predictions} />
           <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
-          <ExplanationChat result={result} selectedTarget={selectedTarget} />
+          <ExplanationChat result={result} selectedTarget={selectedTarget} selectedFinding={selectedFinding} />
         </section>
       </section>
     </main>
   );
+}
+
+function buildFinding(target, prediction) {
+  const details = vesselDetails[target];
+  const probability = prediction?.probability ?? 0;
+  const estimatedNarrowing = Math.round(Math.max(12, Math.min(92, probability * 100)));
+  const severity = probability >= 0.61 ? "critical inspection zone" : probability >= 0.31 ? "watch zone" : "currently low-risk zone";
+  return {
+    target,
+    title: `${target} suspected stenosis focus`,
+    estimatedNarrowing,
+    severity,
+    area: details.area,
+    summary: `${target} is mapped over the ${details.area.toLowerCase()}. Current model risk is ${prediction ? `${asPercent(probability)} ${prediction.risk_level}` : "not available yet"}.`,
+  };
 }
 
 function validatePatient(patient) {
@@ -249,7 +272,7 @@ function PatientForm({ patient, setPatient, onRun, loading }) {
   );
 }
 
-function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
+function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFinding }) {
   const mountRef = useRef(null);
   const stateRef = useRef(null);
   const labelRefs = useRef({});
@@ -372,7 +395,11 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
     });
 
     const riskMarkers = createRiskMarkers();
-    Object.values(riskMarkers).forEach((marker) => riskGlow.add(marker));
+    Object.entries(riskMarkers).forEach(([target, marker]) => {
+      marker.userData.target = target;
+      marker.userData.kind = "defect";
+      riskGlow.add(marker);
+    });
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -382,8 +409,12 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(Object.values(vessels), false)[0];
-      if (hit?.object?.userData?.target) setSelectedTarget(hit.object.userData.target);
+      const hit = raycaster.intersectObjects([...Object.values(riskMarkers), ...Object.values(vessels)], false)[0];
+      if (hit?.object?.userData?.target) {
+        const target = hit.object.userData.target;
+        setSelectedTarget(target);
+        setSelectedFinding(buildFinding(target, stateRef.current?.latestPredictions?.[target]));
+      }
     }
 
     function onResize() {
@@ -403,6 +434,7 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
       desiredCamera: new THREE.Vector3(0, 1.1, 7.2),
       desiredTarget: new THREE.Vector3(0, 0.05, 0),
       focused: false,
+      latestPredictions: {},
       riskMarkers,
       vessels,
     };
@@ -436,6 +468,9 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
   }, [setSelectedTarget]);
 
   useEffect(() => {
+    if (stateRef.current) {
+      stateRef.current.latestPredictions = predictions;
+    }
     const vessels = stateRef.current?.vessels || {};
     const riskMarkers = stateRef.current?.riskMarkers || {};
     Object.entries(vessels).forEach(([target, mesh]) => {
@@ -473,13 +508,14 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget }) {
         <button type="button" onClick={focusSelected}><Target size={14} /> Focus {selectedTarget}</button>
         <button type="button" onClick={resetView}><RotateCcw size={14} /> Reset</button>
       </div>
-      <div className="sceneHint"><Maximize2 size={14} /> Drag to rotate • Scroll to zoom • Click artery risk labels</div>
+      <div className="sceneHint"><Maximize2 size={14} /> Drag to rotate • Scroll to zoom • Click glowing defect zones</div>
     </div>
   );
 }
 
-function ArteryDetail({ selectedTarget, prediction }) {
+function ArteryDetail({ selectedTarget, prediction, selectedFinding }) {
   const details = vesselDetails[selectedTarget];
+  const finding = selectedFinding || buildFinding(selectedTarget, prediction);
   return (
     <div className="arteryDetail">
       <div>
@@ -497,6 +533,16 @@ function ArteryDetail({ selectedTarget, prediction }) {
         <strong>{details.area}</strong>
       </div>
       <p>{details.note}</p>
+      <div className="defectPanel">
+        <span>Defect inspector</span>
+        <strong>{finding.title}</strong>
+        <div className="stenosisMeter">
+          <div style={{ width: `${finding.estimatedNarrowing}%` }} />
+        </div>
+        <p>
+          Estimated narrowing focus: <b>{finding.estimatedNarrowing}%</b>. This is a {finding.severity}. {finding.summary}
+        </p>
+      </div>
     </div>
   );
 }
@@ -517,32 +563,70 @@ function updateRiskLabels(anchors, labels, camera, canvas) {
 
 function createImageBasedHeart() {
   const group = new THREE.Group();
-  const texture = new THREE.TextureLoader().load("/assets/heart-reference.png");
-  texture.colorSpace = THREE.SRGBColorSpace;
-
-  const imageMaterial = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    alphaTest: 0.05,
-    side: THREE.DoubleSide,
+  const myocardium = new THREE.MeshPhysicalMaterial({
+    color: 0x9f111d,
+    roughness: 0.42,
+    metalness: 0.03,
+    clearcoat: 0.36,
+    clearcoatRoughness: 0.22,
   });
-  const heartPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.45, 4.35, 32, 32), imageMaterial);
-  heartPlane.position.set(0, -0.12, 0.2);
-  group.add(heartPlane);
-
-  const depthMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x9f1f2d,
-    transparent: true,
-    opacity: 0.22,
-    roughness: 0.48,
+  const darkMyocardium = new THREE.MeshPhysicalMaterial({
+    color: 0x5d0b13,
+    roughness: 0.5,
     metalness: 0.02,
+    clearcoat: 0.2,
   });
-  const backVolume = createProceduralHeart(depthMaterial);
-  backVolume.position.set(0, -0.22, -0.34);
-  backVolume.scale.set(0.82, 0.86, 0.52);
-  group.add(backVolume);
+  const vesselMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xb91c1c,
+    roughness: 0.35,
+    metalness: 0.04,
+    clearcoat: 0.4,
+  });
+  const veinMaterial = new THREE.MeshBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.72 });
 
-  group.rotation.x = -0.06;
+  const leftVentricle = new THREE.Mesh(new THREE.SphereGeometry(1.05, 64, 40), myocardium);
+  leftVentricle.position.set(-0.48, -0.48, 0);
+  leftVentricle.scale.set(0.95, 1.42, 0.82);
+  group.add(leftVentricle);
+
+  const rightVentricle = new THREE.Mesh(new THREE.SphereGeometry(0.92, 64, 40), myocardium);
+  rightVentricle.position.set(0.52, -0.36, -0.08);
+  rightVentricle.scale.set(0.85, 1.25, 0.72);
+  group.add(rightVentricle);
+
+  const apex = new THREE.Mesh(new THREE.ConeGeometry(1.05, 1.75, 64), darkMyocardium);
+  apex.rotation.z = Math.PI;
+  apex.position.set(-0.04, -1.38, -0.02);
+  apex.scale.set(1.08, 1, 0.72);
+  group.add(apex);
+
+  const leftAtrium = new THREE.Mesh(new THREE.SphereGeometry(0.62, 48, 30), myocardium);
+  leftAtrium.position.set(-0.72, 0.88, -0.1);
+  leftAtrium.scale.set(0.9, 0.76, 0.68);
+  group.add(leftAtrium);
+
+  const rightAtrium = new THREE.Mesh(new THREE.SphereGeometry(0.66, 48, 30), myocardium);
+  rightAtrium.position.set(0.72, 0.78, -0.05);
+  rightAtrium.scale.set(0.86, 0.78, 0.7);
+  group.add(rightAtrium);
+
+  group.add(createTube([[-0.2, 1.22, -0.08], [-0.2, 1.92, 0.02], [0.45, 2.15, 0], [0.82, 1.65, -0.1]], 0.15, vesselMaterial));
+  group.add(createTube([[0.28, 1.16, -0.02], [1.1, 1.42, -0.05], [1.54, 1.0, -0.12]], 0.12, vesselMaterial));
+  group.add(createTube([[-0.56, 1.05, -0.04], [-1.18, 1.32, -0.12], [-1.5, 0.96, -0.18]], 0.1, vesselMaterial));
+
+  [
+    [[-0.18, 0.92, 0.72], [-0.5, 0.28, 0.82], [-0.72, -0.56, 0.72], [-0.46, -1.34, 0.42]],
+    [[0.15, 0.82, 0.68], [0.52, 0.24, 0.7], [0.68, -0.68, 0.56], [0.32, -1.38, 0.32]],
+    [[-0.9, 0.12, 0.45], [-0.32, -0.05, 0.74], [0.72, 0.2, 0.48]],
+    [[-0.25, -0.72, 0.74], [0.22, -0.92, 0.6], [0.72, -0.72, 0.38]],
+  ].forEach((line) => group.add(createTube(line, 0.012, veinMaterial)));
+
+  const highlight = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.14 }));
+  highlight.position.set(-0.55, 0.16, 0.8);
+  highlight.scale.set(1.8, 2.8, 0.45);
+  group.add(highlight);
+
+  group.rotation.set(-0.08, -0.08, -0.04);
   return group;
 }
 
@@ -688,7 +772,7 @@ function ShapExplanation({ prediction, selectedTarget }) {
   );
 }
 
-function ExplanationChat({ result, selectedTarget }) {
+function ExplanationChat({ result, selectedTarget, selectedFinding }) {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([
     {
@@ -700,7 +784,7 @@ function ExplanationChat({ result, selectedTarget }) {
   function askChat() {
     const trimmed = question.trim();
     if (!trimmed) return;
-    const answer = explainFromResult(trimmed, result, selectedTarget);
+    const answer = explainFromResult(trimmed, result, selectedTarget, selectedFinding);
     setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "assistant", text: answer }]);
     setQuestion("");
   }
@@ -734,7 +818,7 @@ function ExplanationChat({ result, selectedTarget }) {
   );
 }
 
-function explainFromResult(question, result, selectedTarget) {
+function explainFromResult(question, result, selectedTarget, selectedFinding) {
   if (!result?.predictions) {
     return "Run a prediction first. Then I can explain the model probabilities and SHAP feature contributions.";
   }
@@ -751,6 +835,10 @@ function explainFromResult(question, result, selectedTarget) {
   }
   if (q.includes("shap") || q.includes("explain")) {
     return `SHAP shows which features pushed the ${selectedTarget} prediction up or down. Positive values increase predicted risk; negative values reduce it for this patient.`;
+  }
+  if (q.includes("defect") || q.includes("stenosis") || q.includes("narrow")) {
+    const finding = selectedFinding || buildFinding(selectedTarget, selected);
+    return `${finding.title}: the current inspection marker estimates about ${finding.estimatedNarrowing}% narrowing focus. This is a model-guided visual explanation, not an angiography measurement.`;
   }
   if (q.includes("why") || q.includes(selectedTarget.toLowerCase())) {
     const up = topIncreasing.map((item) => `${item.feature} (${item.impact > 0 ? "+" : ""}${item.impact})`).join(", ") || "no strong positive SHAP factors";
