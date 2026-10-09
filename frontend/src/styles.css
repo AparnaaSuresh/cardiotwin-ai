@@ -1331,3 +1331,103 @@ select:focus {
 .hero h2::after {
   content: none;
 }
+
+/* Final black/red clinical direction requested for CardioPredict AI */
+:root {
+  --bg: #020102;
+  --panel: rgba(10, 5, 7, 0.92);
+  --panel-strong: rgba(18, 6, 9, 0.96);
+  --text: #fff6f6;
+  --muted: #b99ca2;
+  --line: rgba(255, 255, 255, 0.09);
+  --red: #ff2438;
+  --red-2: #8f0712;
+  --cyan: #ff6b75;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 36, 56, 0.28), transparent 30%),
+    radial-gradient(circle at 78% 4%, rgba(255, 255, 255, 0.06), transparent 22%),
+    radial-gradient(circle at 76% 68%, rgba(143, 7, 18, 0.22), transparent 32%),
+    linear-gradient(180deg, #020102 0%, #080306 48%, #020102 100%) !important;
+}
+
+body::before {
+  background-image:
+    radial-gradient(circle, rgba(255, 36, 56, 0.52) 0 1px, transparent 1.8px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.2) 0 1px, transparent 1.7px);
+  opacity: 0.28;
+}
+
+.topbar,
+.hero,
+.card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(5, 2, 4, 0.88);
+}
+
+.hero {
+  background:
+    radial-gradient(circle at 72% 42%, rgba(255, 36, 56, 0.22), transparent 30%),
+    linear-gradient(120deg, rgba(255, 36, 56, 0.12), transparent 42%),
+    rgba(4, 2, 4, 0.92);
+}
+
+.hero h2 {
+  max-width: 980px;
+  background: linear-gradient(90deg, #ffffff 0%, #fff0f0 38%, #ff3b4d 72%, #8f0712 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.heroVisual {
+  filter: saturate(1.12);
+}
+
+.orbitTwo {
+  border-color: rgba(255, 36, 56, 0.16);
+}
+
+.tripoBanner {
+  display: none !important;
+}
+
+.scanStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scanStrip span {
+  background:
+    linear-gradient(180deg, rgba(255, 36, 56, 0.1), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.46);
+}
+
+.heartStage {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 36, 56, 0.24), transparent 34%),
+    radial-gradient(circle at 50% 58%, rgba(255, 255, 255, 0.06), transparent 22%),
+    linear-gradient(180deg, #050204 0%, #010001 100%);
+}
+
+.heartStage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(255, 36, 56, 0.08) 48%, transparent 100%),
+    radial-gradient(circle at 50% 50%, transparent 0 36%, rgba(0, 0, 0, 0.32) 72%);
+}
+
+.threeMount {
+  z-index: 1;
+}
+
+.heartLabels,
+.sceneHint,
+.sceneTools {
+  z-index: 2;
+}

@@ -10,7 +10,6 @@ import {
   BrainCircuit,
   Clock3,
   Download,
-  FileText,
   HeartPulse,
   History,
   Maximize2,
@@ -206,12 +205,6 @@ function App() {
               <h2>3D Coronary Analysis</h2>
               <p>Rotate, zoom, and inspect artery-level risk markers linked to model output.</p>
             </div>
-          </div>
-          <div className="tripoBanner">
-            <FileText size={15} />
-            <span>
-              Real anatomical GLB ready: place a licensed Tripo/anatomical model at <strong>frontend/public/models/tripo-heart.glb</strong>.
-            </span>
           </div>
           <div className="scanStrip">
             <span><Search size={14} /> Interactive arteries</span>
@@ -709,8 +702,15 @@ function updateRiskLabels(anchors, labels, camera, canvas) {
 
 function createImageBasedHeart() {
   const group = new THREE.Group();
+  const imageLayer = createReferenceHeartLayer();
+  imageLayer.position.set(0, -0.1, 0.82);
+  imageLayer.scale.set(2.9, 3.18, 1);
+  group.add(imageLayer);
+
   const myocardium = new THREE.MeshPhysicalMaterial({
     color: 0x9f111d,
+    transparent: true,
+    opacity: 0.42,
     roughness: 0.42,
     metalness: 0.03,
     clearcoat: 0.36,
@@ -774,6 +774,48 @@ function createImageBasedHeart() {
 
   group.rotation.set(-0.08, -0.08, -0.04);
   return group;
+}
+
+function createReferenceHeartLayer() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 768;
+  canvas.height = 768;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1.12, 48, 48),
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      alphaTest: 0.04,
+      depthWrite: false,
+    })
+  );
+  plane.renderOrder = 5;
+
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const size = Math.min(canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, size, size);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const r = pixels.data[i];
+      const g = pixels.data[i + 1];
+      const b = pixels.data[i + 2];
+      if (r > 238 && g > 238 && b > 238) {
+        pixels.data[i + 3] = 0;
+      }
+    }
+    context.putImageData(pixels, 0, 0);
+    texture.needsUpdate = true;
+  };
+  image.src = "/assets/heart-reference.png";
+
+  return plane;
 }
 
 function createProceduralHeart(material) {
