@@ -648,9 +648,12 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
     });
   }, [predictions, selectedTarget]);
 
+  const selectedPrediction = predictions[selectedTarget];
+
   return (
     <div className="heartStage">
       <div ref={mountRef} className="threeMount" />
+      <ArteryCarePopup target={selectedTarget} prediction={selectedPrediction} />
       <div className="heartLabels">
         {["LAD", "LCX", "RCA"].map((target) => (
           <button
@@ -672,6 +675,59 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
       <div className="sceneHint"><Maximize2 size={14} /> Drag to rotate • Scroll to zoom • Click glowing defect zones</div>
     </div>
   );
+}
+
+function ArteryCarePopup({ target, prediction }) {
+  const details = vesselDetails[target];
+  const probability = prediction?.probability ?? null;
+  const level = prediction?.risk_level || "Not available";
+  const guidance = getCareGuidance(level);
+  const severityText = getSeverityText(level, probability);
+
+  return (
+    <aside className="arteryCarePopup" aria-live="polite">
+      <div className="carePopupTop">
+        <span>{target}</span>
+        <strong>{probability !== null ? `${asPercent(probability)} ${level}` : "--"}</strong>
+      </div>
+      <h3>{details.title}</h3>
+      <p>{severityText}</p>
+      <div className="careLevelBar">
+        <span style={{ width: probability !== null ? asPercent(probability) : "0%" }} />
+      </div>
+      <div className="careGuidance">
+        <strong>Care guidance</strong>
+        <p>{guidance}</p>
+      </div>
+      <small>Model-guided explanation only. A clinician must confirm with proper tests.</small>
+    </aside>
+  );
+}
+
+function getSeverityText(level, probability) {
+  if (probability === null) {
+    return "Run the assessment to see how strongly this artery is affected in the model output.";
+  }
+  if (level === "High") {
+    return "This artery is strongly affected in the model output and should be discussed first in the clinical review.";
+  }
+  if (level === "Moderate") {
+    return "This artery shows a moderate model-estimated risk pattern, so it needs careful review with the patient history.";
+  }
+  return "This artery is not strongly affected in the current model output, but it should still be read with the full patient context.";
+}
+
+function getCareGuidance(level) {
+  if (level === "High") {
+    return "Do not ignore symptoms. Recommend clinician review, confirmatory tests, and risk-factor management; avoid presenting this as a final diagnosis.";
+  }
+  if (level === "Moderate") {
+    return "Review BP, lipid, sugar, ECG/echo indicators, and symptoms. Use SHAP factors to explain why the model raised concern.";
+  }
+  if (level === "Low") {
+    return "Maintain routine monitoring and healthy risk-factor control. Low model risk does not rule out disease if symptoms are serious.";
+  }
+  return "Run prediction first, then use this panel for model-based explanation and safe next-step wording.";
 }
 
 function ArteryDetail({ selectedTarget, prediction, selectedFinding }) {
