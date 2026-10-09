@@ -3,10 +3,28 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Activity, BarChart3, BrainCircuit, HeartPulse, Maximize2, MessageCircle, RotateCcw, Search, Send, Target } from "lucide-react";
+import {
+  Activity,
+  ArrowDown,
+  BarChart3,
+  BrainCircuit,
+  Clock3,
+  Download,
+  FileText,
+  HeartPulse,
+  History,
+  Maximize2,
+  MessageCircle,
+  RotateCcw,
+  Search,
+  Send,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const HISTORY_KEY = "cardiopredict-history";
 
 const initialPatient = {
   age: 62,
@@ -73,6 +91,7 @@ function App() {
   const [selectedFinding, setSelectedFinding] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
 
   const predictions = result?.predictions || {};
   const selectedPrediction = predictions[selectedTarget];
@@ -104,6 +123,7 @@ function App() {
       const data = await response.json();
       setResult(data);
       setSelectedFinding(buildFinding(selectedTarget, data.predictions?.[selectedTarget]));
+      saveHistory(data, payload);
     } catch (err) {
       setError(`Prediction failed. Make sure the backend is running at ${API_URL}.`);
     } finally {
@@ -112,8 +132,49 @@ function App() {
   }
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      if (Array.isArray(saved)) setHistory(saved.slice(0, 5));
+    } catch {
+      setHistory([]);
+    }
     runPrediction();
   }, []);
+
+  function saveHistory(data, payload) {
+    const entry = {
+      id: crypto.randomUUID?.() || `${Date.now()}`,
+      at: new Date().toISOString(),
+      patient: payload,
+      predictions: data.predictions || {},
+      modelMode: data.model_mode || "trained-model",
+    };
+    setHistory((current) => {
+      const next = [entry, ...current].slice(0, 5);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function downloadReport() {
+    if (!result) return;
+    const report = {
+      project: "CardioPredict AI",
+      generated_at: new Date().toISOString(),
+      note: "Educational decision-support prototype. This is not a medical diagnosis.",
+      patient: sanitizePatient(patient),
+      predictions: result.predictions,
+      selected_coronary_focus: selectedFinding || buildFinding(selectedTarget, predictions[selectedTarget]),
+      model_mode: result.model_mode || "trained-model",
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cardiopredict-ai-report-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="shell">
@@ -121,23 +182,36 @@ function App() {
         <div className="brand">
           <div className="brandIcon"><HeartPulse size={25} /></div>
           <div>
-            <h1>CardioTwin AI</h1>
-            <p>Interactive coronary inspection with vessel risk and SHAP explanation</p>
+            <h1>CardioPredict <span>AI</span></h1>
+            <p>Explainable coronary risk engine</p>
           </div>
         </div>
+        <nav className="navLinks" aria-label="Primary navigation">
+          <a href="#assessment">Assessment</a>
+          <a href="#coronary-map">3D Analysis</a>
+          <a href="#explainability">Explainability</a>
+        </nav>
         <span className="modeBadge">{result?.model_mode || "trained-model"}</span>
       </header>
 
-      <section className="dashboard">
+      <HeroSection />
+
+      <section className="dashboard" id="assessment">
         <PatientForm patient={patient} setPatient={setPatient} onRun={runPrediction} loading={loading} />
 
-        <section className="card heartCard">
+        <section className="card heartCard" id="coronary-map">
           <div className="panelHead">
             <HeartPulse size={21} />
             <div>
-              <h2>Coronary 3D Inspection</h2>
-              <p>Rotate, zoom, and inspect artery-level risk markers.</p>
+              <h2>3D Coronary Analysis</h2>
+              <p>Rotate, zoom, and inspect artery-level risk markers linked to model output.</p>
             </div>
+          </div>
+          <div className="tripoBanner">
+            <FileText size={15} />
+            <span>
+              Real anatomical GLB ready: place a licensed Tripo/anatomical model at <strong>frontend/public/models/tripo-heart.glb</strong>.
+            </span>
           </div>
           <div className="scanStrip">
             <span><Search size={14} /> Interactive arteries</span>
@@ -153,7 +227,7 @@ function App() {
           <div className="panelHead">
             <BarChart3 size={21} />
             <div>
-              <h2>Risk Levels</h2>
+              <h2>AI Prediction Dashboard</h2>
               <p>Model probabilities for overall CAD and each vessel.</p>
             </div>
           </div>
@@ -161,9 +235,39 @@ function App() {
           <RiskSummary predictions={predictions} />
           <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
           <ExplanationChat result={result} selectedTarget={selectedTarget} selectedFinding={selectedFinding} />
+          <ReportPanel history={history} onDownload={downloadReport} hasResult={Boolean(result)} />
         </section>
       </section>
     </main>
+  );
+}
+
+function HeroSection() {
+  return (
+    <section className="hero">
+      <div className="heroCopy">
+        <span className="heroBadge"><Sparkles size={16} /> AI-powered cardiovascular assessment</span>
+        <h2>Predict coronary risk with explainable intelligence.</h2>
+        <p>
+          CardioPredict AI turns structured clinical inputs into CAD, LAD, LCX, and RCA risk probabilities,
+          then connects those predictions to SHAP explanations and an interactive coronary inspection view.
+        </p>
+        <div className="heroActions">
+          <a className="heroButton" href="#assessment">
+            Start assessment <ArrowDown size={17} />
+          </a>
+          <span>Clinical decision-support prototype, not a diagnosis.</span>
+        </div>
+      </div>
+      <div className="heroVisual">
+        <div className="heroCore"><HeartPulse size={48} /></div>
+        <div className="orbit orbitOne" />
+        <div className="orbit orbitTwo" />
+        <div className="heroStat statOne"><strong>4</strong><span>risk outputs</span></div>
+        <div className="heroStat statTwo"><strong>SHAP</strong><span>feature impact</span></div>
+        <div className="heroStat statThree"><strong>3D</strong><span>coronary focus</span></div>
+      </div>
+    </section>
   );
 }
 
@@ -272,6 +376,40 @@ function PatientForm({ patient, setPatient, onRun, loading }) {
   );
 }
 
+function ReportPanel({ history, onDownload, hasResult }) {
+  return (
+    <div className="reportBox">
+      <div className="panelHead compact">
+        <History size={19} />
+        <div>
+          <h2>Assessment History</h2>
+          <p>Recent browser-local runs and a downloadable model report.</p>
+        </div>
+      </div>
+      <button className="downloadReport" type="button" onClick={onDownload} disabled={!hasResult}>
+        <Download size={16} /> Download report
+      </button>
+      <div className="historyList">
+        {history.length === 0 && <div className="emptySmall">Run an assessment to create local history.</div>}
+        {history.map((item) => (
+          <article className="historyItem" key={item.id}>
+            <Clock3 size={15} />
+            <div>
+              <strong>{new Date(item.at).toLocaleString()}</strong>
+              <span>
+                CAD {item.predictions.CAD ? asPercent(item.predictions.CAD.probability) : "--"} · LAD{" "}
+                {item.predictions.LAD ? asPercent(item.predictions.LAD.probability) : "--"} · LCX{" "}
+                {item.predictions.LCX ? asPercent(item.predictions.LCX.probability) : "--"} · RCA{" "}
+                {item.predictions.RCA ? asPercent(item.predictions.RCA.probability) : "--"}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFinding }) {
   const mountRef = useRef(null);
   const stateRef = useRef(null);
@@ -301,14 +439,16 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
     if (!mount) return undefined;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf7fbff);
+    scene.background = new THREE.Color(0x080408);
+    scene.fog = new THREE.Fog(0x080408, 6, 14);
 
     const camera = new THREE.PerspectiveCamera(38, mount.clientWidth / mount.clientHeight, 0.1, 100);
     camera.position.set(0, 1.1, 7.2);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -318,10 +458,16 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
     controls.maxDistance = 9.5;
     controls.target.set(0, 0.05, 0);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 2.3));
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.3);
+    scene.add(new THREE.HemisphereLight(0xffefe8, 0x25040a, 2.6));
+    const keyLight = new THREE.DirectionalLight(0xffb0a7, 3.8);
     keyLight.position.set(4, 5, 5);
     scene.add(keyLight);
+    const cyanLight = new THREE.PointLight(0x22d3ee, 1.5, 8);
+    cyanLight.position.set(-3, 0.8, 2.5);
+    scene.add(cyanLight);
+    const redLight = new THREE.PointLight(0xff3045, 2.1, 8);
+    redLight.position.set(2.8, -0.4, 2.2);
+    scene.add(redLight);
 
     const heartGroup = new THREE.Group();
     scene.add(heartGroup);
@@ -745,7 +891,7 @@ function RiskSummary({ predictions }) {
 
 function ShapExplanation({ prediction, selectedTarget }) {
   return (
-    <div className="shapBox">
+    <div className="shapBox" id="explainability">
       <div className="panelHead compact">
         <BrainCircuit size={19} />
         <div>
