@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Search,
   Send,
+  SlidersHorizontal,
   Sparkles,
   Target,
 } from "lucide-react";
@@ -228,6 +229,7 @@ function App() {
           </div>
           {error && <div className="error">{error}</div>}
           <RiskSummary predictions={predictions} />
+          <WhatIfSimulator patient={patient} currentResult={result} />
           <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
           <ExplanationChat
             result={result}
@@ -935,6 +937,174 @@ function RiskSummary({ predictions }) {
         );
       })}
     </div>
+  );
+}
+
+function WhatIfSimulator({ patient, currentResult }) {
+  const [scenario, setScenario] = useState(() => buildWhatIfDefaults(patient));
+  const [projected, setProjected] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setScenario(buildWhatIfDefaults(patient));
+    setProjected(null);
+    setError("");
+  }, [patient]);
+
+  function update(field, value) {
+    setScenario((current) => ({ ...current, [field]: value }));
+  }
+
+  function applyHeartHealthyPreset() {
+    setScenario((current) => ({
+      ...current,
+      systolic_bp: Math.min(Number(current.systolic_bp || 120), 120),
+      diastolic_bp: Math.min(Number(current.diastolic_bp || 80), 80),
+      cholesterol: Math.min(Number(current.cholesterol || 160), 160),
+      triglyceride: Math.min(Number(current.triglyceride || 120), 120),
+      fasting_blood_sugar: Math.min(Number(current.fasting_blood_sugar || 95), 95),
+      pulse_rate: Math.min(Number(current.pulse_rate || 72), 72),
+    }));
+  }
+
+  async function runWhatIf() {
+    setRunning(true);
+    setError("");
+    try {
+      const payload = sanitizePatient({ ...patient, ...scenario });
+      const validationError = validatePatient(payload);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+      const response = await fetch(`${API_URL}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(body || `API returned ${response.status}`);
+      }
+      setProjected(await response.json());
+    } catch (err) {
+      setError(`What-if simulation failed. ${err.message}`);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const currentPredictions = currentResult?.predictions || {};
+  const projectedPredictions = projected?.predictions || {};
+
+  return (
+    <div className="whatIfBox">
+      <div className="panelHead compact">
+        <SlidersHorizontal size={19} />
+        <div>
+          <h2>What-If Risk Simulator</h2>
+          <p>Model-guided scenario only. It is not treatment advice.</p>
+        </div>
+      </div>
+
+      <div className="whatIfGrid">
+        {[
+          ["systolic_bp", "Systolic BP", 80, 220],
+          ["diastolic_bp", "Diastolic BP", 45, 130],
+          ["cholesterol", "Cholesterol", 80, 360],
+          ["triglyceride", "Triglyceride", 40, 700],
+          ["fasting_blood_sugar", "Fasting sugar", 60, 300],
+          ["pulse_rate", "Pulse rate", 40, 160],
+          ["ef_tte", "EF-TTE", 15, 85],
+        ].map(([field, label, min, max]) => (
+          <label key={field}>
+            <span>{label}</span>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              value={scenario[field] ?? patient[field] ?? min}
+              onChange={(event) => update(field, Number(event.target.value))}
+            />
+            <strong>{scenario[field] ?? "--"}</strong>
+          </label>
+        ))}
+      </div>
+
+      <div className="whatIfToggles">
+        {[
+          ["st_elevation", "ST elevation"],
+          ["st_depression", "ST depression"],
+          ["t_inversion", "T inversion"],
+          ["lvh", "LVH"],
+        ].map(([field, label]) => (
+          <button
+            key={field}
+            type="button"
+            className={scenario[field] ? "active" : ""}
+            onClick={() => update(field, !scenario[field])}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="whatIfActions">
+        <button type="button" onClick={applyHeartHealthyPreset}>Apply safer-value preset</button>
+        <button type="button" onClick={runWhatIf} disabled={running || !currentResult}>
+          {running ? "Simulating..." : "Run what-if"}
+        </button>
+      </div>
+
+      {error && <div className="emptySmall">{error}</div>}
+
+      <div className="whatIfCompare">
+        {["CAD", "LAD", "LCX", "RCA"].map((target) => (
+          <WhatIfDelta
+            key={target}
+            target={target}
+            before={currentPredictions[target]}
+            after={projectedPredictions[target]}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function buildWhatIfDefaults(patient) {
+  return {
+    systolic_bp: patient.systolic_bp,
+    diastolic_bp: patient.diastolic_bp,
+    cholesterol: patient.cholesterol,
+    triglyceride: patient.triglyceride,
+    fasting_blood_sugar: patient.fasting_blood_sugar,
+    pulse_rate: patient.pulse_rate,
+    ef_tte: patient.ef_tte,
+    st_elevation: patient.st_elevation,
+    st_depression: patient.st_depression,
+    t_inversion: patient.t_inversion,
+    lvh: patient.lvh,
+  };
+}
+
+function WhatIfDelta({ target, before, after }) {
+  const beforeValue = before?.probability;
+  const afterValue = after?.probability;
+  const delta = afterValue !== undefined && beforeValue !== undefined ? afterValue - beforeValue : null;
+  const improved = delta !== null && delta < 0;
+
+  return (
+    <article className="whatIfDelta">
+      <span>{target}</span>
+      <strong>
+        {before ? asPercent(beforeValue) : "--"} → {after ? asPercent(afterValue) : "--"}
+      </strong>
+      <em className={delta === null ? "" : improved ? "improved" : "worse"}>
+        {delta === null ? "not simulated" : `${improved ? "" : "+"}${Math.round(delta * 100)} pts`}
+      </em>
+    </article>
   );
 }
 

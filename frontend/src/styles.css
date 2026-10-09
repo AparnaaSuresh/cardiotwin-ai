@@ -1502,6 +1502,146 @@ body::before {
   background: rgba(255, 36, 56, 0.18);
 }
 
+.whatIfBox {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 36, 56, 0.24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(255, 36, 56, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(0, 0, 0, 0.12)),
+    rgba(0, 0, 0, 0.38);
+  box-shadow: inset 0 0 48px rgba(255, 36, 56, 0.045);
+}
+
+.whatIfGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.whatIfGrid label {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.whatIfGrid label span {
+  grid-column: 1 / -1;
+  color: #dfcbd0;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.whatIfGrid input[type="range"] {
+  padding: 0;
+  height: 5px;
+  accent-color: var(--red);
+  background: transparent;
+}
+
+.whatIfGrid label strong {
+  justify-self: end;
+  color: white;
+  font-size: 13px;
+}
+
+.whatIfToggles,
+.whatIfActions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.whatIfActions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.whatIfToggles button,
+.whatIfActions button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: #f4e5e8;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.whatIfToggles button.active,
+.whatIfActions button:last-child {
+  border-color: rgba(255, 36, 56, 0.64);
+  background: linear-gradient(135deg, rgba(255, 36, 56, 0.28), rgba(143, 7, 18, 0.36));
+}
+
+.whatIfActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.whatIfCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.whatIfDelta {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 4px 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.whatIfDelta span {
+  color: #ffb3bb;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.whatIfDelta strong {
+  color: white;
+  font-size: 13px;
+}
+
+.whatIfDelta em {
+  grid-column: 2;
+  font-style: normal;
+  color: #a9999f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.whatIfDelta em.improved {
+  color: #20d179;
+}
+
+.whatIfDelta em.worse {
+  color: #ffb545;
+}
+
+@media (max-width: 620px) {
+  .whatIfGrid,
+  .whatIfToggles,
+  .whatIfActions,
+  .whatIfCompare {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes miniHeartBeat {
   0%,
   100% {

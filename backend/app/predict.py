@@ -171,7 +171,10 @@ def _trained_shap_impacts(target: str, frame, artifacts: Dict) -> List[FeatureIm
     transformed = preprocessor.transform(frame)
     if hasattr(transformed, "toarray"):
         transformed = transformed.toarray()
-    values = explainer(transformed)
+    try:
+        values = explainer(transformed, check_additivity=False)
+    except TypeError:
+        values = explainer(transformed)
     raw = values.values[0]
     if raw.ndim > 1:
         raw = raw[:, -1]
