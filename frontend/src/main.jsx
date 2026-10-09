@@ -5,7 +5,6 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   Activity,
-  ArrowDown,
   BarChart3,
   BrainCircuit,
   Clock3,
@@ -18,7 +17,6 @@ import {
   Search,
   Send,
   SlidersHorizontal,
-  Sparkles,
   Target,
 } from "lucide-react";
 import "./styles.css";
@@ -93,6 +91,7 @@ function App() {
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
   const [assessmentId, setAssessmentId] = useState(0);
+  const [activeView, setActiveView] = useState("assessment");
 
   const predictions = result?.predictions || {};
   const selectedPrediction = predictions[selectedTarget];
@@ -189,57 +188,76 @@ function App() {
           </div>
         </div>
         <nav className="navLinks" aria-label="Primary navigation">
-          <a href="#assessment">Assessment</a>
-          <a href="#coronary-map">3D Analysis</a>
-          <a href="#explainability">Explainability</a>
+          <button type="button" className={activeView === "assessment" ? "active" : ""} onClick={() => setActiveView("assessment")}>
+            Assessment
+          </button>
+          <button type="button" className={activeView === "simulator" ? "active" : ""} onClick={() => setActiveView("simulator")}>
+            What-If Simulator
+          </button>
+          <a href="#coronary-map" onClick={() => setActiveView("assessment")}>3D Analysis</a>
         </nav>
         <span className="modeBadge">{result?.model_mode || "trained-model"}</span>
       </header>
 
       <HeroSection />
 
-      <section className="dashboard" id="assessment">
-        <PatientForm patient={patient} setPatient={setPatient} onRun={runPrediction} loading={loading} />
+      {activeView === "assessment" ? (
+        <section className="dashboard" id="assessment">
+          <PatientForm patient={patient} setPatient={setPatient} onRun={runPrediction} loading={loading} />
 
-        <section className="card heartCard" id="coronary-map">
-          <div className="panelHead">
-            <HeartPulse size={21} />
-            <div>
-              <h2>3D Coronary Analysis</h2>
-              <p>Rotate, zoom, and inspect artery-level risk markers linked to model output.</p>
+          <section className="card heartCard" id="coronary-map">
+            <div className="panelHead">
+              <HeartPulse size={21} />
+              <div>
+                <h2>3D Coronary Analysis</h2>
+                <p>Rotate, zoom, and inspect artery-level risk markers linked to model output.</p>
+              </div>
             </div>
-          </div>
-          <div className="scanStrip">
-            <span><Search size={14} /> Interactive arteries</span>
-            <span>Defect markers</span>
-            <span>SHAP linked</span>
-          </div>
-          <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} setSelectedFinding={setSelectedFinding} />
-          <ArteryDetail selectedTarget={selectedTarget} prediction={predictions[selectedTarget]} selectedFinding={selectedFinding} />
-          <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} />
+            <div className="scanStrip">
+              <span><Search size={14} /> Multi-view heart</span>
+              <span>Defect markers</span>
+              <span>SHAP linked</span>
+            </div>
+            <Heart3D predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} setSelectedFinding={setSelectedFinding} />
+            <ArteryDetail selectedTarget={selectedTarget} prediction={predictions[selectedTarget]} selectedFinding={selectedFinding} />
+            <VesselSelector predictions={predictions} selectedTarget={selectedTarget} setSelectedTarget={selectTarget} />
+          </section>
+
+          <section className="card resultCard">
+            <div className="panelHead">
+              <BarChart3 size={21} />
+              <div>
+                <h2>AI Prediction Dashboard</h2>
+                <p>Model probabilities for overall CAD and each vessel.</p>
+              </div>
+            </div>
+            {error && <div className="error">{error}</div>}
+            <RiskSummary predictions={predictions} />
+            <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
+            <ExplanationChat
+              result={result}
+              selectedTarget={selectedTarget}
+              selectedFinding={selectedFinding}
+              assessmentId={assessmentId}
+            />
+            <ReportPanel history={history} onDownload={downloadReport} hasResult={Boolean(result)} />
+          </section>
         </section>
-
-        <section className="card resultCard">
-          <div className="panelHead">
-            <BarChart3 size={21} />
+      ) : (
+        <section className="simulatorPage">
+          <div className="card simulatorHero">
             <div>
-              <h2>AI Prediction Dashboard</h2>
-              <p>Model probabilities for overall CAD and each vessel.</p>
+              <span className="heroBadge"><SlidersHorizontal size={16} /> Model-guided scenario lab</span>
+              <h2>What-If Risk Simulator</h2>
+              <p>Change controllable clinical inputs and compare current vs projected model probabilities.</p>
             </div>
+            <button type="button" className="heroButton" onClick={() => setActiveView("assessment")}>
+              Back to assessment
+            </button>
           </div>
-          {error && <div className="error">{error}</div>}
-          <RiskSummary predictions={predictions} />
           <WhatIfSimulator patient={patient} currentResult={result} />
-          <ShapExplanation prediction={selectedPrediction} selectedTarget={selectedTarget} />
-          <ExplanationChat
-            result={result}
-            selectedTarget={selectedTarget}
-            selectedFinding={selectedFinding}
-            assessmentId={assessmentId}
-          />
-          <ReportPanel history={history} onDownload={downloadReport} hasResult={Boolean(result)} />
         </section>
-      </section>
+      )}
     </main>
   );
 }
@@ -248,18 +266,7 @@ function HeroSection() {
   return (
     <section className="hero">
       <div className="heroCopy">
-        <span className="heroBadge"><Sparkles size={16} /> AI-powered cardiovascular assessment</span>
-        <h2>Predict coronary risk with explainable intelligence.</h2>
-        <p>
-          CardioPredict AI turns structured clinical inputs into CAD, LAD, LCX, and RCA risk probabilities,
-          then connects those predictions to SHAP explanations and an interactive coronary inspection view.
-        </p>
-        <div className="heroActions">
-          <a className="heroButton" href="#assessment">
-            Start assessment <ArrowDown size={17} />
-          </a>
-          <span>Clinical decision-support prototype, not a diagnosis.</span>
-        </div>
+        <h2>CardioPredict AI</h2>
       </div>
       <div className="heroVisual">
         <div className="heroCore"><HeartPulse size={48} /></div>
@@ -786,6 +793,64 @@ function createImageBasedHeart() {
 }
 
 function createReferenceHeartLayer() {
+  const group = new THREE.Group();
+  const views = [
+    {
+      src: "/assets/heart-front.png",
+      fallback: "/assets/heart-reference.png",
+      position: [0, 0, 0.62],
+      rotation: [0, 0, 0],
+      scale: [1, 1.12, 1],
+    },
+    {
+      src: "/assets/heart-back.png",
+      fallback: "/assets/heart-reference.png",
+      position: [0, 0, -0.62],
+      rotation: [0, Math.PI, 0],
+      scale: [1, 1.12, 1],
+    },
+    {
+      src: "/assets/heart-left.png",
+      fallback: "/assets/heart-reference.png",
+      position: [-0.58, 0, 0],
+      rotation: [0, -Math.PI / 2, 0],
+      scale: [0.9, 1.12, 1],
+    },
+    {
+      src: "/assets/heart-right.png",
+      fallback: "/assets/heart-reference.png",
+      position: [0.58, 0, 0],
+      rotation: [0, Math.PI / 2, 0],
+      scale: [0.9, 1.12, 1],
+    },
+    {
+      src: "/assets/heart-top.png",
+      fallback: "/assets/heart-reference.png",
+      position: [0, 0.58, 0],
+      rotation: [-Math.PI / 2, 0, 0],
+      scale: [0.95, 0.95, 1],
+    },
+    {
+      src: "/assets/heart-bottom.png",
+      fallback: "/assets/heart-reference.png",
+      position: [0, -0.58, 0],
+      rotation: [Math.PI / 2, 0, 0],
+      scale: [0.95, 0.95, 1],
+    },
+  ];
+
+  views.forEach((view) => {
+    const plane = createHeartViewPlane(view.src, view.fallback);
+    plane.position.set(...view.position);
+    plane.rotation.set(...view.rotation);
+    plane.scale.set(...view.scale);
+    group.add(plane);
+  });
+
+  return group;
+}
+
+function createHeartViewPlane(src, fallbackSrc) {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 768;
@@ -822,7 +887,11 @@ function createReferenceHeartLayer() {
     context.putImageData(pixels, 0, 0);
     texture.needsUpdate = true;
   };
-  image.src = "/assets/heart-reference.png";
+  image.onerror = () => {
+    if (image.src.endsWith(fallbackSrc)) return;
+    image.src = fallbackSrc;
+  };
+  image.src = src;
 
   return plane;
 }
