@@ -463,9 +463,9 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
-    controls.minDistance = 2.35;
-    controls.maxDistance = 9.5;
-    controls.target.set(0, 0.05, 0);
+    controls.minDistance = 2.1;
+    controls.maxDistance = 7.2;
+    controls.target.set(0, 0, 0);
 
     scene.add(new THREE.HemisphereLight(0xffefe8, 0x25040a, 2.6));
     const keyLight = new THREE.DirectionalLight(0xffb0a7, 3.8);
@@ -499,17 +499,23 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
       "/models/tripo-heart.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.setScalar(2.2);
-        model.position.set(0, -0.5, 0);
+        model.scale.setScalar(2.65);
+        model.position.set(0, -0.35, 0);
+        model.rotation.set(0.04, -0.12, 0);
         model.traverse((child) => {
-          if (child.isMesh) child.material = child.material || heartMaterial;
+          if (child.isMesh) {
+            child.material = child.material || heartMaterial;
+            child.material.side = THREE.DoubleSide;
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
         });
         heartGroup.clear();
         heartGroup.add(model);
       },
       undefined,
       () => {
-        heartGroup.add(createImageBasedHeart());
+        heartGroup.add(createCleanHeartFallback());
       }
     );
 
@@ -586,8 +592,8 @@ function Heart3D({ predictions, selectedTarget, setSelectedTarget, setSelectedFi
       anchors,
       camera,
       controls,
-      desiredCamera: new THREE.Vector3(0, 1.1, 7.2),
-      desiredTarget: new THREE.Vector3(0, 0.05, 0),
+      desiredCamera: new THREE.Vector3(0, 1.1, 6.4),
+      desiredTarget: new THREE.Vector3(0, 0, 0),
       focused: false,
       latestPredictions: {},
       riskMarkers,
@@ -789,6 +795,17 @@ function createImageBasedHeart() {
   group.add(highlight);
 
   group.rotation.set(-0.08, -0.08, -0.04);
+  return group;
+}
+
+function createCleanHeartFallback() {
+  const group = new THREE.Group();
+  const imageLayer = createReferenceHeartLayer();
+  imageLayer.position.set(0, -0.05, 0.05);
+  imageLayer.scale.set(3.05, 3.25, 1);
+  group.add(imageLayer);
+  group.add(createTube([[-0.35, 1.15, 0.1], [-0.2, 1.8, 0.12], [0.45, 2.0, 0.05], [0.78, 1.48, 0.02]], 0.09, new THREE.MeshStandardMaterial({ color: 0xc91828, roughness: 0.35 })));
+  group.add(createTube([[0.12, 1.02, 0.1], [0.78, 1.18, 0.05], [1.1, 0.74, 0.0]], 0.08, new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35 })));
   return group;
 }
 
