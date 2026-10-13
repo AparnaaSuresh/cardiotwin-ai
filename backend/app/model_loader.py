@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from functools import lru_cache
 from typing import Any, Dict
 
 import joblib
@@ -10,6 +11,7 @@ MODEL_DIR = Path(__file__).resolve().parents[1] / "models"
 TARGETS = ("CAD", "LAD", "LCX", "RCA")
 
 
+@lru_cache(maxsize=1)
 def load_artifacts() -> Dict[str, Any]:
     artifacts: Dict[str, Any] = {}
     models = {}
